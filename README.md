@@ -6,7 +6,7 @@ I also play chess, very humbly; and I was always curious of how the programs wor
 
 I began some years ago, but without time, it never went far. I had only a move generator, a alpha-beta search, and that's almost all.
 I have now enough time to spend on the program. By luck, reading the forums, I discovered Vice, and the videos. Thay are great, and very instructive.
-So well, Im following the lessons, and Zangdar came to life. I found also the site from Bruce Moreno that explain a lot of things.
+So well, Im following the lessons, and Zangdar came to life. I found also the site from Bruce Moreland that explain a lot of things.
 
 Why Zangdar ? Well look for the Naheulbeuk dungeon !!
 
