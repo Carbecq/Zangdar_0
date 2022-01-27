@@ -26,6 +26,7 @@ At present, Zangdar can play honestly. I has the following features :
   - MVVVLA
   - killer heuristic
   - hash table
+  - Null Move
 
 + **evaluation**
   - material
