@@ -75,7 +75,7 @@ void Uci::run()
         {
             CB->quit();
             // quit the program as soon as possible
-            break;
+            exit(0);
         }
 
         else if (token == "stop")

@@ -54,9 +54,6 @@ void Search::init()
     logUci              = true;
     logSearch           = true;
     logTactics          = false;
-    _bestMove           = "";
-    _bestScore          = 0;
-
 }
 
 //-----------------------------------------------------
@@ -97,8 +94,6 @@ void Search::new_search()
     limitCheckCount = 0;
     nodes           = 0;
     seldepth        = 0;
-    _bestMove       = "";
-    _bestScore      = 0;
 
     for (int i=0; i<MAX_PLY; i++)
     {
@@ -142,6 +137,7 @@ void Search::think()
     timer.startIteration();
 
     int targetDepth = timer.getSearchDepth();
+    std::string best_move;
 
     // iterative deepening
     for(int currentDepth = 1; currentDepth <= targetDepth; ++currentDepth )
@@ -150,7 +146,7 @@ void Search::think()
         int beta  = MAX_SCORE;
         seldepth  = 0;
 
-        int score = search_root(alpha, beta, currentDepth);
+        int score = search_root(alpha, beta, currentDepth, best_move);
 
         if (stopped)
             break;
@@ -162,9 +158,9 @@ void Search::think()
         bool shouldStop = timer.finishOnThisDepth(elapsed, nodes, 0);
 
         if (logUci)
-            show_uci_result(currentDepth, seldepth,  _bestScore, elapsed);
+            show_uci_result(currentDepth, seldepth,  score, elapsed);
 
-        if (_bestScore > 9000 || _bestScore < -9000)
+        if (abs(score) > IS_MATE)
             break;
 
         // est-ce qu'on a le temps pour une nouvelle itération ?
@@ -172,11 +168,12 @@ void Search::think()
             break;
     }
 
-    if (_bestScore > 9000)
-        std::cout << "mat en " << MAX_SCORE - _bestScore << " demi-coups" << std::endl;
+    //TODO modifier l'affichage UCI
+//    if (_bestScore > 9000)
+//        std::cout << "mat en " << MAX_SCORE - _bestScore << " demi-coups" << std::endl;
 
     if (logUci)
-        show_uci_best(_bestMove);
+        show_uci_best(best_move);
 
     if (logSearch)
         timer.show_time();
@@ -191,7 +188,7 @@ void Search::think()
 //! + puis alpha-beta sur le reste
 //!
 //------------------------------------------------------
-int Search::search_root(int alpha, int beta, int depth)
+int Search::search_root(int alpha, int beta, int depth, std::string& best_move)
 {
 #ifdef DEBUG_CLASS
     std::cout << "Search::root" << std::endl;
@@ -203,6 +200,7 @@ int Search::search_root(int alpha, int beta, int depth)
     std::string plus[2] = {"", "+"};
     bool do_PVS = false;
     HASH_CODE hash_code = HASH_ALPHA;
+    best_move = "";
 
     nodes++;
 
@@ -234,10 +232,11 @@ int Search::search_root(int alpha, int beta, int depth)
 
     // on est à la racine , donc ply = 0
 
-    std::string bestMove;
-    int  legal = 0;         // indique si on a trouvé des coups
-    U32  localBestMoveCode = 0;
-    int  localBestScore = -MAX_SCORE;
+ //   std::string bestMove;
+    int  legal      = 0;         // indique si on a trouvé des coups
+    U32  best_code  = 0;
+    int  best_score = -MAX_SCORE;
+    std::string some_move;
 
     //TODO comment on trie les coups à la racine ?
     //  MVV VLA : lecture fen
@@ -278,6 +277,7 @@ int Search::search_root(int alpha, int beta, int depth)
         }
 
         unmake_move(&moves[index]);
+        some_move = moves[index].show(output);
 
         if (stopped || checkLimits())
         {
@@ -286,15 +286,15 @@ int Search::search_root(int alpha, int beta, int depth)
         }
 
         // On a trouvé un bon coup
-        if(score > localBestScore)
+        if(score > best_score)
         {
-            localBestScore    = score;
-            localBestMoveCode = moves[index].code();
+            best_score = score;
+            best_code  = moves[index].code();
 
             // on a trouvé un meilleur coup pour nous
             if (score > alpha)
             {
-                bestMove   = moves[index].show(output);
+                best_move   = moves[index].show(output);
 
                 // Ce coup est trop bon pour l'adversaire
                 if(score >= beta) //TODO à faire à la racine ?
@@ -314,7 +314,7 @@ int Search::search_root(int alpha, int beta, int depth)
                         searchKillers[0][positions->ply] = moves[index].code();
                     }
 
-                    hashtable.store(positions->hash, localBestMoveCode, beta, HASH_BETA, depth, positions->ply);
+                    hashtable.store(positions->hash, best_code, beta, HASH_BETA, depth, positions->ply);
                     return beta;
                 }
 
@@ -348,11 +348,12 @@ int Search::search_root(int alpha, int beta, int depth)
 
 
     //TODO à vérifier
+    // peut-on être mat ou pat à la racine ?
     if (legal == 0)
     {
-        _bestMove  = ""; //Move();
-        _bestScore = -MAX_SCORE;
-        return 0;
+ //       _bestMove  = ""; //Move();
+ //       _bestScore = -MAX_SCORE;
+        return best_score;
     }
 
     // If the best move was not set in the main search loop
@@ -361,18 +362,18 @@ int Search::search_root(int alpha, int beta, int depth)
     // transposition table
 
     //      if (bestMove.getFlags() & Move::NULL_MOVE) {
-    if (bestMove.empty() /* .none() */ )
+    if (best_move.empty() )
     {
-        bestMove = moves[0].show(output);
+        best_move = some_move;
     }
 
     // faut-il stocker le coup dans la recherche à la racine ??
     if (!stopped)
     {
-        hashtable.store(positions->hash, localBestMoveCode, alpha,  hash_code, depth, positions->ply);
+        hashtable.store(positions->hash, best_code, alpha,  hash_code, depth, positions->ply);
 
-        _bestMove  = bestMove;
-        _bestScore = alpha;
+ //       _bestMove  = bestMove;
+ //       _bestScore = alpha;
     }
 
     return alpha;
@@ -486,7 +487,7 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
     // Mediocre : R=1 is usually too small, making the null-move search too slow.
     //              And R=3 is too large, making the null-move too likely to miss tactics.
 
-    if( doNull && !check && positions->ply && /* (bigPce[side] > 0) && */ depth > NULL_MOVE_R + 1)
+    if( doNull && !check && /* positions->ply && */ /* (bigPce[side] > 0) && */ depth > NULL_MOVE_R + 1)
     {
         // https://www.chessprogramming.org/Depth_Reduction_R
 
@@ -508,9 +509,9 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
 
     gen_moves();
 
-    int  localBestScore = -MAX_SCORE;
-    U32  localBestMoveCode = 0;
     int  legal = 0;         // indique si on a trouvé des coups
+    U32  best_code  = 0;
+    int  best_score = -MAX_SCORE;
 
     score = -MAX_SCORE;
 
@@ -561,10 +562,10 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
             break;
         }
 
-        if(score > localBestScore)
+        if(score > best_score)
         {
-            localBestScore    = score;
-            localBestMoveCode = moves[index].code();
+            best_score = score;
+            best_code  = moves[index].code();
 
             if(score > alpha)
             {
@@ -585,7 +586,7 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
                         searchKillers[0][positions->ply] = moves[index].code();
                     }
 
-                    hashtable.store(positions->hash, localBestMoveCode, beta, HASH_BETA, depth, positions->ply);
+                    hashtable.store(positions->hash, best_code, beta, HASH_BETA, depth, positions->ply);
                     return beta;
                 }
                 alpha      = score;
@@ -632,7 +633,7 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
     // https://www.chessprogramming.org/Triangular_PV-Table
     // https://vajoletchess.blogspot.com/2013/11/a-modern-way-to-collect-principal.html
 
-    hashtable.store(positions->hash, localBestMoveCode, alpha,  hash_code, depth, positions->ply);
+    hashtable.store(positions->hash, best_code, alpha,  hash_code, depth, positions->ply);
 
     return(alpha);
 }

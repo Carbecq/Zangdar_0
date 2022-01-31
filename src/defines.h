@@ -21,8 +21,8 @@ using UCHAR = unsigned char;
 
 
 static constexpr int BOARD_SIZE  = 128;     // nombre de cases de l'échiquier (0x88)
-static constexpr int MAX_PLY     = 120;     // profondeur max de recherche (en demi-coups)  //TODO diminuer cette valeur ?
-static constexpr int MAX_HIST    = 400;     // longueur max de la partie (en demi-coups)
+static constexpr int MAX_PLY     = 120;     // profondeur max de recherche (en demi-coups)
+static constexpr int MAX_HIST    = 800;     // longueur max de la partie (en demi-coups)
 static constexpr int NULL_MOVE_R = 2;       // réduction de la profondeur de recherche
 
 static constexpr int MAX_MOVES  = 8192;     // Number of moves in the candidate move array.

@@ -9,13 +9,10 @@
 #include "Position.h"
 #include "Piece.h"
 
-//TODO faut-il utiliser un générateur avec la même seed ?
-
 class Zobrist
 {
     private:
-        U64 gen_hash();
-        std::mt19937_64 generator;
+        const U64 ZERO = U64(0);
 
     public:
         U64 piece_key[2][7][BOARD_SIZE];

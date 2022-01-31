@@ -65,8 +65,6 @@ private:
     bool        logUci;
     bool        logSearch;
     bool        logTactics;
-    std::string _bestMove;      //  Best move found on last search.
-    int         _bestScore;     //  Score corresponding to _bestMove
 
     Timer       timer;
     HashTable   hashtable;
@@ -83,7 +81,7 @@ private:
     int  IsRepetition();
     void PickNextMove(int index);
     void new_search();
-    int  search_root(int alpha, int beta, int depth);
+    int  search_root(int alpha, int beta, int depth, std::string &best_move);
 
     void show_uci_result(int currentDepth, int seldepth, int bestScore, int elapsed) const;
     void show_uci_best(const std::string& name) const;

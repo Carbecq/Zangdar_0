@@ -46,7 +46,7 @@ void commands()
 
         else if (token == "help")
         {
-            std::cout << "q(uit) / v(ersion) / cli " << std::endl;
+            std::cout << "q(uit) / uci / v(ersion) / v (ersion) / cli " << std::endl;
         }
 
         else if (token == "v")
