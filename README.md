@@ -15,22 +15,23 @@ I would like to thank specially the authors of Vice, TSCP, Gerbil. They helped m
 At present, Zangdar can play honestly. I has the following features :
 
 + **language** 
-  - written in C++
+  - Written in C++
 
 + **board** 
   - 0x88
 
 + **search**
-  - alpha-beta
-  - quiescence
+  - Alpha-Beta
+  - Quiescence
   - MVVVLA
-  - killer heuristic
-  - hash table
+  - Killer Heuristic
+  - Principal Variation Search
+  - Hash Table
   - Null Move
 
 + **evaluation**
-  - material
-  - piece/square table
+  - Material
+  - Piece/Square Table
 
 + **communication**
   - UCI
