@@ -10,12 +10,16 @@ void Search::test_search(int depth, const std::string& line)
 
     new_game();
     init_fen(line);
+
     setDepth(depth);
     setLogUci(true);
     setlogSearch(true);
     setlogTactics(false);
-    display_ascii();
+//    display_ascii();
+
     think();
+
+
 
 
     //    char WAC1[200] =  "2rr3k/pp3pp1/1nnqbN1p/3pN3/2pP4/2P3Q1/PPB4P/R4RK1 w - -";

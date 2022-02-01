@@ -168,10 +168,6 @@ void Search::think()
             break;
     }
 
-    //TODO modifier l'affichage UCI
-//    if (_bestScore > 9000)
-//        std::cout << "mat en " << MAX_SCORE - _bestScore << " demi-coups" << std::endl;
-
     if (logUci)
         show_uci_best(best_move);
 
@@ -222,26 +218,30 @@ int Search::search_root(int alpha, int beta, int depth, std::string& best_move)
     if (check == true)
         ++depth;
 
+    int score  = -MAX_SCORE;
+    U32 PvMove = 0;
+
+    // On utilise la hashtable seulement pour trier les coups
+    hashtable.probe(positions->hash, PvMove, score, alpha, beta, depth, positions->ply);
+
     // génération des coups
     gen_moves();
 
-    int score = -MAX_SCORE;
+    // Tri des coups de la PV line
+    if(PvMove != 0)
+    {
+        pv_move(PvMove, positions->ply);
+    }
 
     // Dans la recherche à la racine, on ne cherche pas
     // dans la hashtable.
 
     // on est à la racine , donc ply = 0
 
- //   std::string bestMove;
     int  legal      = 0;         // indique si on a trouvé des coups
     U32  best_code  = 0;
     int  best_score = -MAX_SCORE;
     std::string some_move;
-
-    //TODO comment on trie les coups à la racine ?
-    //  MVV VLA : lecture fen
-    //  Killer  : gen_moves : ne peut pas marcher à la racine
-    //  capture : gen_moves
 
     for (int index = first_move[positions->ply]; index < first_move[positions->ply + 1]; ++index)
     {
@@ -250,8 +250,6 @@ int Search::search_root(int alpha, int beta, int depth, std::string& best_move)
 
         if (make_move(&moves[index]) == false)
             continue;
-
-        //std::cout << " >> " << moves[index].show() <<  std::endl;
 
         if (logTactics)
             echec = plus[in_check(positions->side_to_move)];
@@ -351,8 +349,6 @@ int Search::search_root(int alpha, int beta, int depth, std::string& best_move)
     // peut-on être mat ou pat à la racine ?
     if (legal == 0)
     {
- //       _bestMove  = ""; //Move();
- //       _bestScore = -MAX_SCORE;
         return best_score;
     }
 
@@ -362,6 +358,8 @@ int Search::search_root(int alpha, int beta, int depth, std::string& best_move)
     // transposition table
 
     //      if (bestMove.getFlags() & Move::NULL_MOVE) {
+    //TODO ca peut arriver ??
+    // peut-etre avec aspiration ??
     if (best_move.empty() )
     {
         best_move = some_move;
@@ -371,9 +369,6 @@ int Search::search_root(int alpha, int beta, int depth, std::string& best_move)
     if (!stopped)
     {
         hashtable.store(positions->hash, best_code, alpha,  hash_code, depth, positions->ply);
-
- //       _bestMove  = bestMove;
- //       _bestScore = alpha;
     }
 
     return alpha;
@@ -478,19 +473,10 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
         }
 //    }
 
-    // Mora  :                                                R = 1
-    // Drofa : depth >= 3 ; depth ... expression complexe
-    // BBC   : depth >= 3 ; alphabeta(depth - 1 - 2         > R = 2
-    // Bruce Moreland : R=2 ; alphabeta(depth -1 -R, ...)
-    // Vice  : depth >= 4   ; alphabepa(depth - 4           > R = 3
-
-    // Mediocre : R=1 is usually too small, making the null-move search too slow.
-    //              And R=3 is too large, making the null-move too likely to miss tactics.
-
+    // Null Move Pruning
+    //TODO ajouter le test sur les pièces
     if( doNull && !check && /* positions->ply && */ /* (bigPce[side] > 0) && */ depth > NULL_MOVE_R + 1)
     {
-        // https://www.chessprogramming.org/Depth_Reduction_R
-
         make_null_move();
         score = -alpha_beta(-beta, -beta + 1, depth - 1 - NULL_MOVE_R, false);
         take_null_move();
@@ -507,18 +493,19 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
         }
     }
 
+    // Génération des coups
     gen_moves();
 
-    int  legal = 0;         // indique si on a trouvé des coups
-    U32  best_code  = 0;
-    int  best_score = -MAX_SCORE;
-
-    score = -MAX_SCORE;
-
+    // Tri des coups de la PV line
     if(PvMove != 0)
     {
         pv_move(PvMove, positions->ply);
     }
+
+    int  legal = 0;         // indique si on a trouvé des coups
+    U32  best_code  = 0;
+    int  best_score = -MAX_SCORE;
+    score = -MAX_SCORE;
 
     // Boucle sur tous les coups
     for (int index = first_move[positions->ply]; index < first_move[positions->ply + 1]; ++index)
@@ -629,10 +616,6 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
         }
     }
 
-    // https://chess.stackexchange.com/questions/8835/collecting-principal-variations-during-search-and-using-them-in-ordering
-    // https://www.chessprogramming.org/Triangular_PV-Table
-    // https://vajoletchess.blogspot.com/2013/11/a-modern-way-to-collect-principal.html
-
     hashtable.store(positions->hash, best_code, alpha,  hash_code, depth, positions->ply);
 
     return(alpha);
@@ -675,24 +658,24 @@ I32 Search::quiescence(int alpha, int beta)
         return evaluate(positions->side_to_move);
 
     /* check with the evaluation function */
-    I32 Score = evaluate(positions->side_to_move);
+    I32 score = evaluate(positions->side_to_move);
 
-    assert(Score > -MAX_SCORE && Score < MAX_SCORE);
+    assert(score > -MAX_SCORE && Score < MAX_SCORE);
 
     // le score est trop mauvais pour moi, on n'a pas besoin
     // de chercher plus loin
-    if(Score >= beta)
+    if(score >= beta)
         return beta;
 
     // l'évaluation est meilleure que alpha. Donc on peut améliorer
     // notre position. On continue à chercher.
-    if(Score > alpha)
-        alpha = Score;
+    if(score > alpha)
+        alpha = score;
 
     gen_caps();
 
     int Legal = 0;
-    Score = -MAX_SCORE;
+    score = -MAX_SCORE;
 
     // Boucle sur tous les coups
     for (int index = first_move[positions->ply]; index < first_move[positions->ply + 1]; ++index)
@@ -707,15 +690,15 @@ I32 Search::quiescence(int alpha, int beta)
 
         Legal++;
         seldepth = positions->ply;
-        Score = -quiescence(-beta, -alpha);
+        score = -quiescence(-beta, -alpha);
         unmake_move(&moves[index]);
 
-        if(Score > alpha)
+        if(score > alpha)
         {
-            if(Score >= beta)
+            if(score >= beta)
                 return beta;
 
-            alpha = Score;
+            alpha = score;
 
             /* update the PV */
             //TODO : faut-il le faire ici ??
@@ -794,13 +777,30 @@ void Search::show_uci_result(int depth, int seldepth, int bestScore, int elapsed
 
     // le point séparateur n'est pas bien reconnu par Arena
 
-    std::cout << "info score cp "
-              << std::right << bestScore
-              << " depth " << std::setw(2)  << depth
+    std::cout << "info ";
+
+    if (bestScore > IS_MATE)
+    {
+        std::cout << "mate " << (MAX_SCORE - bestScore)/2 + 1;  // mate <y>
+                                                        // mate in y moves, not plies.
+                                                        // If the engine is getting mated use negative values for y.
+    }
+    else if (bestScore < -IS_MATE)
+    {
+        std::cout << "mate -" << (bestScore - MAX_SCORE)/2 + 1;
+    }
+    else
+    {
+        std::cout << "score cp " << std::right << bestScore;    // the score from the engine's point of view in centipawns
+    }
+
+    // r3r2k/2R3pp/pp1q1p2/8/3P3R/7P/PP3PP1/3Q2K1 w - - bm Rxh7+; id "WAC.035";
+
+    std::cout << " depth "    << std::setw(2)  << depth
               << " seldepth " << std::setw(2)  << seldepth
-              << " nodes " << std::setw(14) << nodes
-              << " nps "   << std::setw(5) << std::fixed << std::setprecision(2)  << nodes/elapsed/1000.0
-              << " time "  << std::setw(6) << elapsed/1000.0;
+              << " nodes "    << std::setw(14) << nodes
+              << " nps "      << std::setw(5)  << std::fixed << std::setprecision(2)  << nodes/elapsed/1000.0
+              << " time "     << std::setw(6)  << elapsed/1000.0;
 
     std::cout <<" pv";
     for (int j = 0; j < pv_length[0]; ++j)

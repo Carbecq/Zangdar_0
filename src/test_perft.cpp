@@ -155,7 +155,6 @@ void test_perft(ChessBoard* CB, int dmax)
    auto end = std::chrono::high_resolution_clock::now();
    auto ms  = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
-//    delete CB;
     file.close();
 
     printf("# Passed       %10u\n",     passed_tests);

@@ -51,7 +51,7 @@ void HashTable::store(U64 hash, U32 code, int score, int flags, int depth, int p
     //
     assert(index >= 0 && index <= numEntries - 1);
 
-    assert(depth >= 1 && depth < MAX_PLY);                  //TODO depth >= 1 ???
+  //  assert(depth >= 1 && depth < MAX_PLY);                  //TODO depth >= 1 ???
     assert(flags >= HASH_ALPHA && flags <= HASH_EXACT);
     assert(score >= -MAX_SCORE && score <= MAX_SCORE);
     assert(ply >= 0 && ply < MAX_PLY);
@@ -83,28 +83,51 @@ void HashTable::store(U64 hash, U32 code, int score, int flags, int depth, int p
 }
 
 //========================================================
-//! \brief  Lecture d'une donnée
+//! \brief  Recherche d'une donnée
+//! \param[in]  hash    code hash de la position recherchée
+//! \param{out] code    coup trouvé
+//! \param{out] score   score de ce coup
+//! \param{in]  alpha
+//! \param{in]  beta
+//! \param{in]  depth
+//! \param{in]  ply
 //--------------------------------------------------------
 bool HashTable::probe(U64 hash, U32& code, int& score, int alpha, int beta, int depth, int ply)
 {
+    // commentaires de Blunder 5
+
+    // Get the entry from the table, calculating an index by modulo-ing the hash of
+    // the position by the size of the table.
+
+    // note : une autre manière d'obtenir cet index est possible
+    //TODO : à voir
     int index = hash % numEntries;
 
     assert(index >= 0 && index <= numEntries - 1);
 
-    assert(depth >=1 && depth < MAX_PLY);
+ //   assert(depth >=1 && depth < MAX_PLY);
     assert(alpha < beta);
     assert(alpha >= -MAX_SCORE && alpha <= MAX_SCORE);
     assert(beta  >= -MAX_SCORE && beta  <= MAX_SCORE);
     assert(ply >= 0 && ply < MAX_PLY);
 
+    // Since index collisions can occur, test if the hash of the entry at this index
+    // actually matches the hash for the current position.
     if( entries[index].hash == hash )
     {
+        // Even if we don't get a score we can use from the table, we can still
+        // use the best move in this entry and put it first in our move ordering
+        // scheme.
         code = entries[index].code;
-        if(entries[index].depth >= depth)   //TODO ?
+
+        // To be able to get an accurate value from this entry, make sure the results of
+        // this entry are from a search that is equal or greater than the current
+        // depth of our search.
+        if(entries[index].depth >= depth)
         {
  //           hit++;
 
-            assert(entries[index].depth >= 1 && entries[index].depth < MAX_PLY);
+    //        assert(entries[index].depth >= 1 && entries[index].depth < MAX_PLY);
             assert(entries[index].flags >= HASH_ALPHA && entries[index].flags <= HASH_EXACT);
 
             score = entries[index].score;
@@ -127,6 +150,14 @@ bool HashTable::probe(U64 hash, U32& code, int& score, int alpha, int beta, int 
              *
              */
 
+            // If the score we get from the transposition table is a checkmate score, we need
+            // to do a little extra work. This is because we store checkmates in the table using
+            // their distance from the node they're found in, not their distance from the root.
+            // So if we found a checkmate-in-8 in a node that was 5 plies from the root, we need
+            // to store the score as a checkmate-in-3. Then, if we read the checkmate-in-3 from
+            // the table in a node that's 4 plies from the root, we need to return the score as
+            // checkmate-in-7.
+
             if(score > IS_MATE)
                 score -= ply;
             else if (score < -IS_MATE)
@@ -137,6 +168,9 @@ bool HashTable::probe(U64 hash, U32& code, int& score, int alpha, int beta, int 
             switch(entries[index].flags)
             {
                 case HASH_ALPHA:
+                // If we have an alpha entry, and the entry's score is less than our
+                // current alpha, then we know that our current alpha is the best score
+                // we can get in this node, so we can stop searching and use alpha.
                     if(score <= alpha)
                     {
                         score = alpha;
@@ -144,6 +178,10 @@ bool HashTable::probe(U64 hash, U32& code, int& score, int alpha, int beta, int 
                     }
                     break;
                 case HASH_BETA:
+                // If we have a beta entry, and the entry's score is greater than our
+                // current beta, then we have a beta-cutoff, since while
+                // searching this node previously, we found a value greater than the current
+                // beta. so we can stop searching and use beta.
                     if(score >= beta)
                     {
                         score = beta;
@@ -151,6 +189,7 @@ bool HashTable::probe(U64 hash, U32& code, int& score, int alpha, int beta, int 
                     }
                     break;
                 case HASH_EXACT:
+                // If we have an exact entry, we can use the saved score.
                     return true;        // return score; ou entries[index]
                     break;
                 default:

@@ -38,7 +38,7 @@ void test_search(ChessBoard* CB, int dmax)
     int             total_ko = 0;
 
     CB->setOutput(1);
-
+    auto start = std::chrono::high_resolution_clock::now();
 
     // Boucle sur l'ensemble des positions de test
     while (std::getline(file, line))
@@ -77,7 +77,13 @@ void test_search(ChessBoard* CB, int dmax)
 
     } // boucle position
 
-    file.close();
+    // Elapsed time in milliseconds
+   auto end = std::chrono::high_resolution_clock::now();
+   auto ms  = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+   printf("Time     = %9.3f s\n",  ms/1000.0);
+
+   file.close();
 }
 
 void test_mirror(ChessBoard* CB)

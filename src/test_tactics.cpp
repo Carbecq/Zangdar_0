@@ -48,7 +48,7 @@ void test_tactics(ChessBoard* CB, int dmax)
     int             total_ko = 0;
 
     CB->setOutput(1);
-
+    auto start = std::chrono::high_resolution_clock::now();
 
     // Boucle sur l'ensemble des positions de test
     while (std::getline(file, line))
@@ -90,10 +90,13 @@ void test_tactics(ChessBoard* CB, int dmax)
 
     } // boucle position
 
+    // Elapsed time in milliseconds
+   auto end = std::chrono::high_resolution_clock::now();
+   auto ms  = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
     printf("total_ok = %d \n", total_ok);
     printf("total_ko = %d \n", total_ko);
-
+    printf("Time     = %9.3f s\n",  ms/1000.0);
 
     file.close();
-
 }

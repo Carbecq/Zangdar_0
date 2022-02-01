@@ -665,7 +665,6 @@ bool Board::in_check(Color c)
     return(is_attacked_by(pieces[c][0].square(), static_cast<Color>(!c) ));
 }
 
-// const int VictimScore[7] = { PieceValue[PAWN], 100, 200, 300, 400, 500, 600}; //, 100, 200, 300, 400, 500, 600 };
 
 // https://www.chessprogramming.org/MVV-LVA
 // MVV/LVA=Most Valuable Victim/Least Valuable Attacker,
