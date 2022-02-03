@@ -656,7 +656,7 @@ void Board::add_capture_promote(Square from, Square to, U32 flags, int& index)
 //! \brief Teste si le camp c est en échec
 //! \param[in] c    couleur du camp
 //-------------------------------------------------------------
-bool Board::in_check(Color c)
+bool Board::is_in_check(Color c)
 {
 //     fprintf(fp, "in_check debut \n");fflush(fp);
 

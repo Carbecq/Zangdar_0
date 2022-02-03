@@ -52,3 +52,30 @@ void Position::reset()
     hash = 0ULL;
 
 }
+//====================================================================
+//! \brief  Détermine s'il y a eu répétition de la même position
+//! Pour cela, on compare le hash code de la position.
+//!
+//! \return Renvoie le nombre de fois où la osition courante
+//! a été répétée.
+//--------------------------------------------------------------------
+int Position::is_repetition(const std::array<History, MAX_HIST>& history) const
+{
+    int r = 0;
+
+    for (int i = hply - fifty; i < hply; ++i)
+    {
+        if (history[i].hash == hash)
+            r++;
+    }
+
+    return r;
+}
+
+//=============================================================================
+//! \brief  Détermine si la position est nulle
+//-----------------------------------------------------------------------------
+bool Position::is_draw(const std::array<History, MAX_HIST>& history) const
+{
+    return((is_repetition(history) || fifty >= 100) && ply);
+}

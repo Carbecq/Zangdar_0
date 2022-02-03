@@ -78,7 +78,6 @@ private:
 
     I32  alpha_beta(int alpha, int beta, int depth, bool doNull);
     I32  quiescence(int alpha, int beta);
-    int  IsRepetition();
     void PickNextMove(int index);
     void new_search();
     int  search_root(int alpha, int beta, int depth, std::string &best_move);

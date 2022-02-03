@@ -7,26 +7,12 @@
 
 class Board;
 
-#include <array>
 #include "defines.h"
 #include "Piece.h"
 #include "Move.h"
 #include "Position.h"
 #include "Zobrist.h"
 
-// structure destinée à stocker l'historique de make_move.
-// celle-ci sera nécessaire pour effectuer un unmake_move
-
-typedef struct {
-    Square  ep_square;          // case en-passant : si les blancs jouent e2-e4, la case est e3
-    Square  ep_took;            //                                                           e4
-    U32     castle;             // droit au roque
-
-    int     fifty;              // nombre de coups depuis une capture, ou un movement de pion
-    U64     hash;               // nombre unique (?) correspondant à la position
-
-    Piece*  captured;           // pointeur sur la pièce capturée, dans la liste des pièces
-} History;
 
 // tables de déplacement
 
@@ -95,7 +81,7 @@ public:
     void setOutput(int m) { output = m; }
 
     I32  evaluate(Color side);
-    bool in_check(const Color c);
+    bool is_in_check(const Color c);
 
     // Makemove.cpp
     bool make_move(const Move *move);
@@ -103,6 +89,7 @@ public:
     void make_null_move();
     void take_null_move();
     void pv_move(U32 PvMove, int ply);
+    int  nbr_pieces(Color side) const;
 
     // Tests.cpp
     U64  perft(int depth);

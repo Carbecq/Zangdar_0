@@ -192,56 +192,65 @@ int Search::search_root(int alpha, int beta, int depth, std::string& best_move)
     assert(beta > alpha);
     assert(depth >= 0);
 
-    std::string echec;
-    std::string plus[2] = {"", "+"};
-    bool do_PVS = false;
-    HASH_CODE hash_code = HASH_ALPHA;
-    best_move = "";
-
-    nodes++;
-
-    // Time-out ou arrêt
-    if (stopped || checkLimits())
-    {
-        stopped = true;
-        return 0;
-    }
-
-    pv_length[positions->ply] = positions->ply;
-
-    // Nullité par répétition ou règle des 50 coups
-    if((IsRepetition() || positions->fifty >= 100) && positions->ply)
-        return 0;
-
-    // Si on est en échec, on cherche plus profondément
-    bool check = in_check(positions->side_to_move);
-    if (check == true)
-        ++depth;
-
-    int score  = -MAX_SCORE;
-    U32 PvMove = 0;
-
-    // On utilise la hashtable seulement pour trier les coups
-    hashtable.probe(positions->hash, PvMove, score, alpha, beta, depth, positions->ply);
+     int legal = 0;
+    int  temp_score = -MAX_SCORE;
+    U32  best_code  = 0;
+    int  old_alpha = alpha;
 
     // génération des coups
     gen_moves();
 
-    // Tri des coups de la PV line
-    if(PvMove != 0)
+    for (int index = first_move[positions->ply]; index < first_move[positions->ply + 1]; ++index)
     {
-        pv_move(PvMove, positions->ply);
+        if (make_move(&moves[index]) == false)
+            continue;
+        legal++;
+        unmake_move(&moves[index]);
     }
 
-    // Dans la recherche à la racine, on ne cherche pas
-    // dans la hashtable.
+    if (legal == 0)
+    {
+        std::cout << "**********************************legal=0" << std::endl;
+        return -MAX_SCORE;
+    }
 
-    // on est à la racine , donc ply = 0
+    std::string echec;
+    std::string plus[2] = {"", "+"};
+    bool do_PVS = false;
 
-    int  legal      = 0;         // indique si on a trouvé des coups
-    U32  best_code  = 0;
-    int  best_score = -MAX_SCORE;
-    std::string some_move;
+    nodes++;
+
+    // Time-out ou arrêt
+//    if (stopped || checkLimits())
+//    {
+//        stopped = true;
+//        return 0;
+//    }
+
+    pv_length[positions->ply] = positions->ply;
+
+    // Nullité par répétition ou règle des 50 coups
+    if(positions->is_draw(history))
+        return 0;
+
+    // Si on est en échec, on cherche plus profondément
+    bool in_check = is_in_check(positions->side_to_move);
+    if (in_check == true)
+        ++depth;
+
+    int score       = -MAX_SCORE;
+    U32 ht_move     = 0;
+
+    // On utilise la hashtable seulement pour trier les coups
+    hashtable.probe(positions->hash, ht_move, score, alpha, beta, depth, positions->ply);
+
+    // Tri des coups de la PV line
+    if (ht_move != 0)
+    {
+        pv_move(ht_move, positions->ply);
+    }
+
+ //   std::string some_move;
 
     for (int index = first_move[positions->ply]; index < first_move[positions->ply + 1]; ++index)
     {
@@ -252,9 +261,7 @@ int Search::search_root(int alpha, int beta, int depth, std::string& best_move)
             continue;
 
         if (logTactics)
-            echec = plus[in_check(positions->side_to_move)];
-
-        legal++;
+            echec = plus[is_in_check(positions->side_to_move)];
 
         if (do_PVS)
         {
@@ -275,7 +282,7 @@ int Search::search_root(int alpha, int beta, int depth, std::string& best_move)
         }
 
         unmake_move(&moves[index]);
-        some_move = moves[index].show(output);
+  //      some_move = moves[index].show(output);
 
         if (stopped || checkLimits())
         {
@@ -284,40 +291,44 @@ int Search::search_root(int alpha, int beta, int depth, std::string& best_move)
         }
 
         // On a trouvé un bon coup
-        if(score > best_score)
+        if(score > temp_score)
         {
-            best_score = score;
+            temp_score = score;    // le mieux que l'on ait trouvé, pas forcément intéressant
+
+            best_move  = moves[index].show(output);  // ok, voilà un bon coup à conserver
             best_code  = moves[index].code();
 
             // on a trouvé un meilleur coup pour nous
             if (score > alpha)
             {
-                best_move   = moves[index].show(output);
 
                 // Ce coup est trop bon pour l'adversaire
-                if(score >= beta) //TODO à faire à la racine ?
-                {
-                    // Killer Heuristic
-                    // On stocke 2 Killers (ce qui semble suffisant).
-                    // Lors de la prochaine génération de coups, si on trouve un coup
-                    // qui est un Killer, on va modifier son score
-                    //  ->add_quiet_move
-                    // Puis quand dans la recherche alpha-beta, lorsqu'on cherche
-                    // le meilleur coup (PickNextMove), les 2 Killers Move
-                    // vont remonter vers la tête.
+                // comme on appelle la routine avec beta=+MAX_SCORE
+                // on n'a jamais score >= beta
+//                if(score >= beta)
+//                {
+//                    // non, ce coup est trop bon pour l'adversaire
 
-                    if (moves[index].capture() == false)
-                    {
-                        searchKillers[1][positions->ply] = searchKillers[0][positions->ply];
-                        searchKillers[0][positions->ply] = moves[index].code();
-                    }
+//                    // Killer Heuristic
+//                    // On stocke 2 Killers (ce qui semble suffisant).
+//                    // Lors de la prochaine génération de coups, si on trouve un coup
+//                    // qui est un Killer, on va modifier son score
+//                    //  ->add_quiet_move
+//                    // Puis quand dans la recherche alpha-beta, lorsqu'on cherche
+//                    // le meilleur coup (PickNextMove), les 2 Killers Move
+//                    // vont remonter vers la tête.
 
-                    hashtable.store(positions->hash, best_code, beta, HASH_BETA, depth, positions->ply);
-                    return beta;
-                }
+//                    if (moves[index].capture() == false)
+//                    {
+//                        searchKillers[1][positions->ply] = searchKillers[0][positions->ply];
+//                        searchKillers[0][positions->ply] = moves[index].code();
+//                    }
+
+////                    hashtable.store(positions->hash, best_code, beta, HASH_BETA, depth, positions->ply);
+//                    return beta;
+//                }
 
                 alpha      = score;
-                hash_code  = HASH_EXACT;
                 do_PVS     = true;
 
                 // alpha cutoff
@@ -335,40 +346,43 @@ int Search::search_root(int alpha, int beta, int depth, std::string& best_move)
                     pv[positions->ply][j] = pv[positions->ply + 1][j];
                 pv_length[positions->ply] = pv_length[positions->ply + 1];
 
-                // Break if we've found a checkmate
-//TODO utile ?                if (score == MAX_SCORE)
-//                {
-//                    break;
-//                }
-            } // score > alpha
+             } // score > alpha
+
        } // meilleur score
+
+   //     printf("move %d : %s ; score=%d temp_score=%d best_move=%s best_code=%d\n", index, moves[index].show().c_str(), score, temp_score, best_move.c_str(), best_code);
+
     }  // boucle sur les coups
 
+    /*
+     *
+---TS----------------------------A----------------------------------------------------
 
-    //TODO à vérifier
-    // peut-on être mat ou pat à la racine ?
-    if (legal == 0)
-    {
-        return best_score;
-    }
+---------------------S----------------------------------------------------------
+                     TS
+                     BM
 
-    // If the best move was not set in the main search loop
-    // alpha was not raised at any point, just pick the first move
-    // avaliable (arbitrary) to avoid putting a null move in the
-    // transposition table
+---------------------------------------------S-----------------------------------
+                                             TS
+                                             BM
+                                             A
 
-    //      if (bestMove.getFlags() & Move::NULL_MOVE) {
-    //TODO ca peut arriver ??
-    // peut-etre avec aspiration ??
-    if (best_move.empty() )
-    {
-        best_move = some_move;
-    }
+     *
+     *
+     * Score
+     * Temp Score
+     * Best Move = Best Code
+     * Alpha
+     */
 
-    // faut-il stocker le coup dans la recherche à la racine ??
+
+    // On écrit le meilleur coup dans la hashtable
     if (!stopped)
     {
-        hashtable.store(positions->hash, best_code, alpha,  hash_code, depth, positions->ply);
+        if (alpha != old_alpha)
+            hashtable.store(positions->hash, best_code, temp_score,  HASH_EXACT, depth, positions->ply);
+        else
+            hashtable.store(positions->hash, best_code, alpha,  HASH_ALPHA, depth, positions->ply);
     }
 
     return alpha;
@@ -389,7 +403,7 @@ int Search::search_root(int alpha, int beta, int depth, std::string& best_move)
 //! \param[in]  doNull  on va effectuer un Null Move
 //! \return Valeur du score
 //-----------------------------------------------------
-I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
+I32 Search::alpha_beta(int alpha, int beta, int depth, bool do_NULL)
 {
     //   std::cout << "ab depth =" << depth << std::endl;
 
@@ -400,7 +414,9 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
     std::string echec;
     std::string plus[2] = {"", "+"};
     bool do_PVS = false;
-    HASH_CODE hash_code = HASH_ALPHA;
+//  bool pv_node = alpha != beta - 1;
+    int  old_alpha = alpha;
+
 
     // NOTE : si pas de quies, mettre pv_length ici
     //    pv_length[ply] = ply;
@@ -418,7 +434,8 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
     nodes++;
 
     //  Time-out
-    if (stopped || checkLimits()) {
+    if (stopped || checkLimits())
+    {
         stopped = true;
         return 0;
     }
@@ -429,7 +446,7 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
        to pick a move and can't simply return 0) then check to
        see if the position is a repeat. if so, we can assume that
        this line is a draw and return 0. */
-    if((IsRepetition() || positions->fifty >= 100) && positions->ply)
+    if(positions->is_draw(history))
         return 0;
 
     /* are we too deep? */
@@ -439,12 +456,12 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
         return evaluate(positions->side_to_move);
 
     /* are we in check? if so, we want to search deeper */
-    bool check = in_check(positions->side_to_move);
-    if (check == true)
+    bool in_check = is_in_check(positions->side_to_move);
+    if (in_check == true)
         ++depth;
 
-    int score  = -MAX_SCORE;
-    U32 PvMove = 0;
+    int score   = -MAX_SCORE;
+    U32 ht_move = 0;
 
     // Recherche de la position actuelle dans la hashtable
     // le test "positions->ply > 0" fait gagner de la perfo
@@ -452,7 +469,7 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
     // on est déjà à ply 1
 //    if(positions->ply > 0)
 //    {
-        bool hfc = hashtable.probe(positions->hash, PvMove, score, alpha, beta, depth, positions->ply);
+        bool hfc = hashtable.probe(positions->hash, ht_move, score, alpha, beta, depth, positions->ply);
 
         if (hfc == true)
         {
@@ -468,14 +485,17 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
         {
             // SI la position a été trouvée dans la hashtable,
             // MAIS que la profondeur est inférieure à depth,
-            // ALORS hfc = false, ET PvMove != 0
+            // ALORS hfc = false, ET ht_move != 0
 
         }
 //    }
 
     // Null Move Pruning
-    //TODO ajouter le test sur les pièces
-    if( doNull && !check && /* positions->ply && */ /* (bigPce[side] > 0) && */ depth > NULL_MOVE_R + 1)
+    //TODO ajouter le test sur les pièces : piece_count >= 5 (toutes les pieces sauf pions
+    //TODO ajouter test sur pv_node ??
+        // /* !pv_node && */ /* positions->ply && */ (nbr_pieces(positions->side_to_move) > 0) &&
+
+    if( do_NULL && !in_check && depth > NULL_MOVE_R + 1)
     {
         make_null_move();
         score = -alpha_beta(-beta, -beta + 1, depth - 1 - NULL_MOVE_R, false);
@@ -497,14 +517,14 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
     gen_moves();
 
     // Tri des coups de la PV line
-    if(PvMove != 0)
+    if(ht_move != 0)
     {
-        pv_move(PvMove, positions->ply);
+        pv_move(ht_move, positions->ply);
     }
 
-    int  legal = 0;         // indique si on a trouvé des coups
-    U32  best_code  = 0;
-    int  best_score = -MAX_SCORE;
+    int  legal = 0;                 // indique si on a trouvé des coups
+    U32  best_code  = 0;            // meilleur coup à renvoyer
+    int  temp_score = -MAX_SCORE;   // meilleur coup local
     score = -MAX_SCORE;
 
     // Boucle sur tous les coups
@@ -517,7 +537,7 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
             continue;
 
         if (logTactics)
-            echec = plus[in_check(positions->side_to_move)];
+            echec = plus[is_in_check(positions->side_to_move)];
 
         legal++;
 
@@ -549,15 +569,17 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
             break;
         }
 
-        if(score > best_score)
+        // On a trouvé un bon coup
+        if(score > temp_score)
         {
-            best_score = score;
-            best_code  = moves[index].code();
+            temp_score = score;     // le mieux que l'on ait trouvé, pas forcément intéressant
+            best_code  = moves[index].code();   // ok, voilà un bon coup à conserver
 
             if(score > alpha)
             {
                 if(score >= beta)
                 {
+                                                    // non, ce coup est trop bon pour l'adversaire
                     // Killer Heuristic
                     // On stocke 2 Killers (ce qui semble suffisant).
                     // Lors de la prochaine génération de coups, si on trouve un coup
@@ -576,8 +598,8 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
                     hashtable.store(positions->hash, best_code, beta, HASH_BETA, depth, positions->ply);
                     return beta;
                 }
+
                 alpha      = score;
-                hash_code  = HASH_EXACT;
                 do_PVS     = true;
 
                 // alpha cutoff
@@ -599,10 +621,10 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
         }
     } // boucle sur les coups
 
-    /* no legal moves? then we're in checkmate or stalemate */
+    // est-on mat ou pat ?
     if (legal == 0)
     {
-        if (check)
+        if (in_check)
         {
             // On est en échec, et on n'a aucun coup : on est MAT
             //     std::cout <<  "on est echec" << std::endl;
@@ -616,7 +638,16 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
         }
     }
 
-    hashtable.store(positions->hash, best_code, alpha,  hash_code, depth, positions->ply);
+    // faut-il écrire le coup trouvé dans la hashtable, même si alpha n'est pas amélioré ?
+    // d'après les tests : OUI
+    // On écrit le meilleur coup dans la hashtable
+    if (!stopped)
+    {
+        if (alpha != old_alpha)
+            hashtable.store(positions->hash, best_code, temp_score,  HASH_EXACT, depth, positions->ply);
+        else
+            hashtable.store(positions->hash, best_code, alpha,  HASH_ALPHA, depth, positions->ply);
+    }
 
     return(alpha);
 }
@@ -629,7 +660,6 @@ I32 Search::alpha_beta(int alpha, int beta, int depth, bool doNull)
 //-------------------------------------------------------------
 I32 Search::quiescence(int alpha, int beta)
 {
-    //   std::cout << "quiescence " << std::endl;
 
     assert(beta > alpha);
     //    ASSERT(CheckBoard(pos));
@@ -648,7 +678,7 @@ I32 Search::quiescence(int alpha, int beta)
 
     pv_length[positions->ply] = positions->ply;
 
-    if((IsRepetition() || positions->fifty >= 100) && positions->ply)
+    if(positions->is_draw(history))
         return 0;
 
     /* are we too deep? */
@@ -660,7 +690,9 @@ I32 Search::quiescence(int alpha, int beta)
     /* check with the evaluation function */
     I32 score = evaluate(positions->side_to_move);
 
-    assert(score > -MAX_SCORE && Score < MAX_SCORE);
+  //  printf( "quiescence a=%d b=%d score=%d \n", alpha, beta, score);
+
+    assert(score > -MAX_SCORE && score < MAX_SCORE);
 
     // le score est trop mauvais pour moi, on n'a pas besoin
     // de chercher plus loin
@@ -686,7 +718,7 @@ I32 Search::quiescence(int alpha, int beta)
             continue;
 
         if (logTactics)
-            echec = plus[in_check(positions->side_to_move)];
+            echec = plus[is_in_check(positions->side_to_move)];
 
         Legal++;
         seldepth = positions->ply;
@@ -739,23 +771,6 @@ void Search::PickNextMove(int moveNum)
     }
 
     //  verif("PickNextMove", positions);
-}
-
-/* reps() returns the number of times the current position
-   has been repeated. It compares the current value of hash
-   to previous values. */
-
-int Search::IsRepetition()
-{
-    int r = 0;
-
-    for (int i = positions->hply - positions->fifty; i < positions->hply; ++i)
-    {
-        if (history[i].hash == positions->hash)
-            r++;
-    }
-
-    return r;
 }
 
 //=========================================================

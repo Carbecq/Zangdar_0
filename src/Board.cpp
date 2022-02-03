@@ -116,3 +116,37 @@ void Board::pv_move(U32 PvMove, int ply)
         }
     }
 }
+
+int Board::nbr_pieces(Color side) const
+{
+    int total = 0;
+    for (auto & p : pieces[side])
+    {
+        if (p.dead() == false)
+        {
+            switch(p.type())
+            {
+            case PAWN:
+                break;
+            case KNIGHT:
+                total++;
+                break;
+            case BISHOP:
+                total++;
+                break;
+            case ROOK:
+                total++;
+                break;
+            case QUEEN:
+                total++;
+                break;
+            case KING:
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    return(total);
+}

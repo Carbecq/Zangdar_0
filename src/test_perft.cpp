@@ -163,7 +163,7 @@ void test_perft(ChessBoard* CB, int dmax)
     printf("Moves Actual   %10llu\n",   total_actual);
     printf("Moves Expected %10llu\n",   total_expected);
     printf("Time           %9.3f s\n",  ms/1000.0);
-    printf("Moves/s        %.3f\n",     (total_actual/ms)/1000.0);
+    printf("Moves/s        %.3f\n",     (double)total_actual/(double)ms/1000.0);
 
     std::cout << "********************" << std::endl;
 }

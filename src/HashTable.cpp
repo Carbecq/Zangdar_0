@@ -95,6 +95,9 @@ void HashTable::store(U64 hash, U32 code, int score, int flags, int depth, int p
 bool HashTable::probe(U64 hash, U32& code, int& score, int alpha, int beta, int depth, int ply)
 {
     // commentaires de Blunder 5
+    // le site de Moreland contient d'autres informations intéressantes
+
+    // Voir le code Gerbil, bien que la notation ne soit pas aisée
 
     // Get the entry from the table, calculating an index by modulo-ing the hash of
     // the position by the size of the table.
@@ -167,6 +170,9 @@ bool HashTable::probe(U64 hash, U32& code, int& score, int alpha, int beta, int 
 
             switch(entries[index].flags)
             {
+                // Dans les cas ALPHA ou BETA, mettre le score à alpha, ou beta, peur mener à
+                // des instabilités
+
                 case HASH_ALPHA:
                 // If we have an alpha entry, and the entry's score is less than our
                 // current alpha, then we know that our current alpha is the best score
@@ -196,8 +202,8 @@ bool HashTable::probe(U64 hash, U32& code, int& score, int alpha, int beta, int 
                     assert(false);
                     break;
             }
-        }
-    }
+        } // depth OK
+    } // hash OK
 
     return false;
 }

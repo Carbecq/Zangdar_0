@@ -119,26 +119,31 @@ void Search::test_gen(const std::string& line)
     setlogSearch(false);
     setlogTactics(true);
 
-    init_fen(line);
+ //   init_fen(line);
     display_ascii();
+
+    int alpha = -MAX_SCORE;
+    int beta = MAX_SCORE;
+    int depth = getDepth();
 
     gen_moves();
 
     // Boucle sur tous les coups
     for (int index = first_move[positions->ply]; index < first_move[positions->ply + 1]; ++index)
     {
-        if (make_move(&moves[index]) == true)
-        {
+        PickNextMove(index);
+        if (make_move(&moves[index]) == false)
+            continue;
+
             //        Square s = moves[i].from();
             //        PieceType  t = board[s]->type();
-            printf("move %d : %s \n", index, moves[index].show().c_str());
+            int score = -alpha_beta(-beta, -alpha, depth - 1, true);
+            printf("move %d : %s ; %d \n", index, moves[index].show().c_str(), score);
 
             unmake_move(&moves[index]);
-        }
-        else
-        {
 
-        }
+
+
     }
 }
 

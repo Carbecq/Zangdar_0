@@ -234,7 +234,7 @@ bool Board::make_move(const Move* move)
 
     //    std::cout << "make move : " << move->show() << "  test légalité du coup joué par " << ppos->side_to_move << std::endl;
 
-    if (in_check( side ))
+    if (is_in_check( side ))
     {
         unmake_move(move);
         return(false);

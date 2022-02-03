@@ -142,7 +142,10 @@ void console()
             CB->search.display_ascii();
 
         else if(token == "think")
+        {
+            CB->search.new_game();
             CB->search.think();
+        }
 
         else if(token == "depth")
         {
