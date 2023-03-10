@@ -1,5 +1,5 @@
 # Zangdar
-A UCI chess engine written in C++11.
+A UCI chess engine written in C++17
 
 This project is somewhat a hobby, it will serve to learn the ropes of chess programming.
 I also play chess, very humbly; and I was always curious of how the programs work.
@@ -11,22 +11,25 @@ So well, Im following the lessons, and Zangdar came to life. I found also the si
 Why Zangdar ? Well look for the Naheulbeuk dungeon !!
 
 I would like to thank specially the authors of Vice, TSCP, Gerbil. They helped me a lot understand several aspects of programmation.
+I also use the M42 library for generating attacks; and took inspiration from the Libchess library. 
 
-At present, Zangdar can play honestly. I has the following features :
+At present, Zangdar can play honestly. I done several matches, and I think Zangdar has an elo of about 2400.
+It has the following features :
 
 + **language** 
-  - Written in C++
+  - Written in C++17
 
 + **board** 
-  - 0x88
+  - Magic Bitboard
 
 + **search**
-  - Alpha-Beta
+  - Iterative Deepening
+  - Alpha-Beta  , Fail Soft
   - Quiescence
   - MVVVLA
   - Killer Heuristic
   - Principal Variation Search
-  - Hash Table
+  - Transposition Table, with 4 buckets
   - Null Move
 
 + **evaluation**
