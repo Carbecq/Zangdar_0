@@ -1,7 +1,6 @@
 #ifndef SEARCH_H
 #define SEARCH_H
 
-static constexpr int NULL_MOVE_R        = 2;    // réduction de la profondeur de recherche
 
 class Search;
 
@@ -9,7 +8,8 @@ class Search;
 #include "defines.h"
 #include "Board.h"
 #include "Timer.h"
-#include "TranspositionTable.h"
+#include "OrderingInfo.h"
+
 
 // classe permettant de redéfinir mon 'locale'
 // en effet, je n'en ai pas trouvé (windows ? mingw ?)
@@ -22,76 +22,59 @@ protected:
     virtual std::string do_grouping() const { return "\03"; }
 };
 
-class Search // : public Board
+
+class Search
 {
 public:
     Search();
+    Search(const Board &m_board, const Timer& m_timer,
+           OrderingInfo& m_info, bool m_log, int m_id);
     ~Search();
 
-    std::atomic<bool> stopped;
-    U64  nodes;             // nodes searched
-
-    void goThink();
-
-    template <Color C> void think(Board* m_board, Timer* m_timer);
-
-    void init_fen(const std::string& fen);
-    void reset();
+    // Point de départ de la recherche
+    template <Color C> void iterDeep();
 
     // Fonction UCI : Search_Uci.cpp
-    void position(std::istringstream &is);
     void stop();
-    void new_game();
-    void quit();
+    MOVE get_best() const { return best_move; }
+    void test_value(const std::string &fen);
 
-    void setDepth(int depth);
-    void setLogUci(bool b)      { logUci = b;       }
-    void setlogSearch(bool b)   { logSearch = b;    }
-    void setlogTactics(bool b)  { logTactics = b;   }
-    void setOutput(int o)       { output = o;       }
-    void setTime(int time);
-    void setInfinite(bool infini);
-
-    void test_value(const std::string &abc);
-    void test_think(const std::string& line, int dmax, int tmax);
-    bool test_tactics(const std::string& line, int dmax, int tmax, U64& total_nodes, U64& total_time);
-    bool test_mirror(const std::string& line);
-
+    U64  nodes;
+    int  current_depth;
 
 private:
-    bool        logUci;
-    bool        logSearch;
-    bool        logTactics;
-    Board*      board;
-    Timer*      timer;
-    TranspositionTable   transtable;
-    int         output;
-    MOVE        best;
+    std::atomic<bool>   stopped;
 
-    int     searchHistory[2][6][64];
-    U32     searchKillers[2][MAX_PLY];      // Killer Moves, 2 pour chaque profondeur de recherche
+    int     threadID;
+    Board   my_board;
+    Timer   my_timer;
+    int     output;
+    MOVE    best_move;
+    int     best_score;
+    bool    logUci;
+    OrderingInfo my_orderingInfo;
 
     std::array<int, MAX_PLY> statEval;
 
-    template <Color C> int alpha_beta(int ply, int alpha, int beta, int depth, bool do_NULL, MOVE* pv );
-    template <Color C> int quiescence(int ply, int alpha, int beta, MOVE* pv);
+    static constexpr int CONTEMPT        = 0;           // TODO : option ?
+    static constexpr int RAZORING_MARGIN = 650;
+    static constexpr int FUTILITYMARGINS[4] = {0, 200, 300, 500};
+    static constexpr int NULL_MOVE_R        = 2;    // réduction de la profondeur de recherche
 
-    void PickNextMove(MoveList &move_list, int index);
+    template <Color C> int alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bool do_NULL, MOVE* pv);
+    template <Color C> int quiescence(Board &board, int ply, int alpha, int beta, MOVE* pv);
+
     void new_search();
-    void setKillers(U32 move, int ply);
-    void order_moves(int ply, MoveList& move_list, U32 PvMove);
 
-    void show_uci_result(int currentDepth, int best_score, U64 elapsed, MOVE *pv) const;
+    void show_uci_result(int depth, int best_score, U64 elapsed, MOVE *pv) const;
     void show_uci_best(const MOVE best_move) const;
     bool check_limits();
     void update_pv(MOVE *dst, MOVE *src, MOVE move) const;
 
-
-
-
-
+    inline int futility_margin(int depth, bool improving) {
+        return depth * 110 + ((improving) ? 75 : 0);
+    }
 
 };
-
 
 #endif // SEARCH_H

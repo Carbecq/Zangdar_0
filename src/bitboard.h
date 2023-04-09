@@ -8,7 +8,8 @@
 #include <ostream>
 #include "defines.h"
 #include "bitmask.h"
-
+#include <sstream>
+#include <iostream>
 
 //! \brief  crée un bitboard à partir d'une position
 constexpr Bitboard square_to_bit(const int sq) noexcept { return(1ULL << sq);}
@@ -114,17 +115,9 @@ constexpr Bitboard byteswap(Bitboard b)
 }
 
 
-
-
-
 [[nodiscard]] constexpr Bitboard adjacent(Bitboard b)  noexcept {
 return north(b) | south(b) | east(b) | west(b) | north_east(b) | north_west(b) | south_east(b) | south_west(b);
 }
-
-//**======================================
-
-#include <sstream>
-#include <iostream>
 
 //======================================
 //! \brief  Impression d'un Bitboard

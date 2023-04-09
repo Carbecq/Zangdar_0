@@ -4,13 +4,10 @@
 #include <array>
 #include "defines.h"
 #include "m42.h"
-//#include "square.h"
-//#include "bitboard.h"
 
 namespace movegen {
 
 extern Bitboard BETWEEN_SQS[64][64];
-
 
 //A lookup table for king move bitboards
 constexpr Bitboard KING_ATTACKS[64] = {
@@ -119,14 +116,11 @@ inline Bitboard queen_moves(const int sq, const Bitboard occ) {
     return(M42::queen_attacks(sq, occ));
 }
 
-
-
 [[nodiscard]] inline Bitboard squares_between(const int sq1, const int sq2) noexcept {
     return BETWEEN_SQS[sq1][sq2];
 }
 
-void     calculate_squares_between() ;
-
+void calculate_squares_between();
 
 }  // namespace movegen
 

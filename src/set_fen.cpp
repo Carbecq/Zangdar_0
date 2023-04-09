@@ -1,5 +1,7 @@
 #include <cassert>
+#include <algorithm>
 #include <sstream>
+#include <string>
 #include "Board.h"
 
 //    rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1

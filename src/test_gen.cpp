@@ -71,7 +71,7 @@ void test_suite(const std::string& abc, int dmax)
         numero++;
 
         // ligne vide
-        if (line.empty())
+        if (line.size() < 3)
             continue;
 
         // Commentaire ou espace au début de la ligne
@@ -253,18 +253,18 @@ void test_divide(int depth)
     std::string fen = START_FEN;
     U64 nbr[10] = {1, 20, 400, 8902,  197281,   4865609,   119060324,   3195901860,  84998978956,   2439530234167  };
 
-    Board CB(fen);
+    Board board(fen);
 
-    std::cout << CB << std::endl;
+    std::cout << board << std::endl;
     std::cout << std::endl;
 
     auto start = std::chrono::high_resolution_clock::now();
     U64 total;
 
-    if (CB.turn() == WHITE)
-        total = CB.divide<WHITE>(depth);
+    if (board.turn() == WHITE)
+        total = board.divide<WHITE>(depth);
     else
-        total = CB.divide<BLACK>(depth);
+        total = board.divide<BLACK>(depth);
 
     auto end = std::chrono::high_resolution_clock::now();
     auto sec = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()/1000.0;
@@ -279,5 +279,159 @@ void test_divide(int depth)
 
 }
 
+//#include "movegen.h"
+
+void Board::test_rays()
+{
+#if 0
+    std::string fen;
+    fen = "8/8/k1K2Br1/8/4B3/8/6b1/8 w - - 0 1";
+    fen = "k1N5/8/K2Br3/8/2B3B1/8/4b3/8 w - - 0 1";
+    set_fen(fen);
+
+    std::cout << display() << std::endl;
+    std::cout << std::endl;
 
 
+    const auto us   = turn();             // side_to_move
+    const auto them = !us;
+    const auto ksq  = x_king[us];
+
+
+
+    const auto kfile = bitboards::files[Square::file(ksq)];
+    const auto krank = bitboards::ranks[Square::rank(ksq)];
+    const auto pinned = this->pinned();                 // toutes les pièces clouées
+    const auto pinned_horizontal = pinned & krank;      // toutes les pièces clouées horizontalement
+    const auto pinned_vertical = pinned & kfile;
+    const auto pinned_by_rook = pinned_horizontal | pinned_vertical;   // toutes les pièces clouées par une tour
+    const auto pinned_bishop = pinned ^ pinned_by_rook;                // toutes les pièces clouées par un fou
+
+
+    Bitboard bbaux;
+    auto allowed        = occupancy_c<them>();
+
+    //    PrintBB(pinned);
+    //    PrintBB(pinned_horizontal);
+    //    PrintBB(pinned_vertical);
+    //    PrintBB(pinned_by_rook);
+    //    PrintBB(~pinned_by_rook);      // toutes les cases sauf les pièces clouées par une tour
+    //    PrintBB(pinned_bishop);
+
+    // Bitboard contenant les cases attaquées par un fou
+    // situé à la position du roi
+    const Bitboard bishop_rays = movegen::bishop_moves(ksq, occupied());
+
+    // Bitboard contenant les cases attaquées par une tour
+    // situé à la position du roi
+    const Bitboard rook_rays   = movegen::rook_moves(ksq, occupied());
+
+
+    Bitboard bishop_pinned = ZERO;
+    Bitboard rook_pinned   = ZERO;
+
+    auto allowed_depl = non_occupied();
+
+    bbaux = occupancy(us) & bishop_rays;
+    printf("---------------------------bishop_rays \n");
+    PrintBB(bishop_rays);
+    printf("---------------------------occupancy(us) & bishop_rays \n");
+    PrintBB(bbaux);
+
+
+    while (bbaux) {
+        int sq = next_square(bbaux);
+        const auto bb = square_to_bit(sq);
+        const auto blockers = occupied() ^ bb;
+        printf("---------------------------blockers \n");
+        PrintBB(blockers);
+
+        const auto new_rays  = movegen::bishop_moves(ksq, blockers);
+        const auto discovery = new_rays ^ bishop_rays;
+        const auto attackers = discovery & (pieces(them, PieceType::Bishop) | pieces(them, PieceType::Queen));
+
+        if (attackers) {
+            bishop_pinned |= bb;
+
+            const auto asq = first_square(attackers);
+            auto move_mask = (movegen::squares_between(ksq, asq) ^ bb) & allowed_depl;
+            printf("---------------------------move_mask \n");
+            PrintBB(move_mask);
+
+        }
+    }
+
+#endif
+}
+
+#include "Search.h"
+
+//========================================================
+//! \brief  Affiche tous les coups possibles ainsi que leur valeur
+//! \param  depth   profondeur max de recherche
+//---------------------------------------------------------
+void test_eval(const std::string& fen)
+{
+
+//    std::string promobug = "8/p1R5/6p1/3k2Np/7P/5K2/1bp4r/8 b - - 14 60 ";
+
+//    fen = "7k/3q4/8/1r1R2b1/8/3p4/8/7K w - - 0 1";
+//    fen = "r3k3/1K6/8/8/8/8/8/8 w q - 0 1";
+//    fen = "k7/8/8/1p6/5q2/1Q2P3/8/7K w - - 0 1";
+//    fen = "7k/Rp1b3B/2BR3p/2Nr2Qn/q5qb/prqn1b2/1PP1P3/3R1K2 w - - 0 1"; // test mvvlva
+//fen = "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1 ";
+//fen = "6k1/5ppp/8/1pP5/PP6/4P3/8/6K1 w - - 3 1 ";
+//fen = "6k1/4Pppp/8/1pP5/PP6/4P3/4P3/6K1 w - - 3 1 ";
+
+    Board b;
+    Timer t;
+    OrderingInfo info;
+    Search search(b, t, info, false, 0);
+    search.test_value(fen);
+}
+
+//====================================================
+//! \brief Réalisation d'un test controlant si
+//! l'évaluation est symétrique.
+//!
+//----------------------------------------------------
+void test_mirror(void)
+{
+    std::string     str_home = HOME;
+    std::string     str_file = str_home + "tests/mirror.epd";
+
+    std::ifstream file(str_file);
+    if (!file.is_open())
+    {
+        std::cout << "[test_mirror] impossible d'ouvrir le fichier " << str_file << std::endl;
+        return;
+    }
+
+    std::string     line;
+    int numero = 0;
+    Board board;
+
+    // Boucle sur l'ensemble des positions de test
+    while (std::getline(file, line))
+    {
+        // ligne vide
+        if (line.size() < 3)
+            continue;
+
+        numero++;
+
+        if (board.test_mirror(line) == false)
+        {
+            std::cout << "Mirror Fail : " << line << std::endl;
+        }
+        else
+        {
+//            std::cout << "Mirror OK : " << line << std::endl;
+        }
+
+        if((numero % 1000) == 0)
+            std::cout << "position " << numero << std::endl;
+    }
+
+    file.close();
+}

@@ -46,14 +46,16 @@ constexpr Bitboard ADiagMask16[] = {
 
 
 constexpr Bitboard Adjacent_Files[] =
-{FILE_B_BB,
+{
+ FILE_B_BB,
  FILE_A_BB | FILE_C_BB,
  FILE_B_BB | FILE_D_BB,
  FILE_C_BB | FILE_E_BB,
  FILE_D_BB | FILE_F_BB,
  FILE_E_BB | FILE_G_BB,
  FILE_F_BB | FILE_H_BB,
- FILE_G_BB};
+ FILE_G_BB
+};
 
 constexpr Bitboard LightSquares = 0x55aa55aa55aa55aaULL;
 constexpr Bitboard DarkSquares  = 0xaa55aa55aa55aa55ULL;
@@ -68,7 +70,6 @@ constexpr Bitboard NOT_FILE_H_BB = ~FILE_H_BB;
 
 constexpr Bitboard NOT_FILE_HG_BB = 4557430888798830399ULL;
 constexpr Bitboard NOT_FILE_AB_BB = 18229723555195321596ULL;
-
 
 [[nodiscard]] constexpr Bitboard north(Bitboard b)  noexcept { return (b << 8); }
 [[nodiscard]] constexpr Bitboard south(Bitboard b)  noexcept { return (b >> 8); }

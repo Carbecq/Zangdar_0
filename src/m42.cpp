@@ -1,27 +1,29 @@
 #include "m42.h"
 
+Bitboard RankMask64[64] = {0};
+Bitboard FileMask64[64] = {0};
+Bitboard DiagonalMask64[64] = {0};
+Bitboard AntiDiagonalMask64[64] = {0};
+Bitboard SquareMask64[64] = {0};
 
 namespace M42 {
-  uint64_t KnightAttacks[64];
-  uint64_t KingAttacks[64];
-  uint64_t PawnAttacks[2][64];
-  uint64_t ThisAndNextSq[64];
-  uint64_t PrevSquares[64];
+  Bitboard ThisAndNextSq[64];
+  Bitboard PrevSquares[64];
 
-  uint64_t RTables[0x16200]; // 708 kB
-  uint64_t * RAttacks[64];
-  uint64_t RMasks[64];
-  uint64_t BTables[0x12C0]; // 37 kB
-  uint64_t * BAttacks[64];
-  uint64_t BMasks[64];
+  Bitboard RTables[0x16200]; // 708 kB
+  Bitboard * RAttacks[64];
+  Bitboard RMasks[64];
+  Bitboard BTables[0x12C0]; // 37 kB
+  Bitboard * BAttacks[64];
+  Bitboard BMasks[64];
 
   // Initialize fancy magic bitboards
   void init_piece(bool rook, int sq)
   {
-    uint64_t *Masks = rook ? RMasks : BMasks;
-    const uint64_t * Magics = rook ? RMagics : BMagics;
-    uint64_t ** Attacks = rook ? RAttacks : BAttacks;
-    uint64_t(*calc_attacks)(int, uint64_t) =
+    Bitboard *Masks = rook ? RMasks : BMasks;
+    const Bitboard * Magics = rook ? RMagics : BMagics;
+    Bitboard ** Attacks = rook ? RAttacks : BAttacks;
+    Bitboard(*calc_attacks)(int, Bitboard) =
       rook ? calc_rook_attacks : calc_bishop_attacks;
     const unsigned * Shift = rook ? RShift : BShift;
 
@@ -36,15 +38,15 @@ namespace M42 {
       Masks[sq] &= ~0xFF00000000000000ULL;  // Rank H
 
     const size_t TableSize = 1ULL << (64 - Shift[sq]);
-    std::memset(Attacks[sq], 0, TableSize * sizeof(uint64_t));
+    std::memset(Attacks[sq], 0, TableSize * sizeof(Bitboard));
 
-    uint64_t occ = 0;
+    Bitboard occ = 0;
     do {
       uint32_t index = uint32_t(((occ & Masks[sq]) * Magics[sq]) >> Shift[sq]);
       assert((Attacks[sq][index] == 0)
         || (Attacks[sq][index] == calc_attacks(sq, occ)));
       Attacks[sq][index] = calc_attacks(sq, occ);
-    } while (occ = next_subset(Masks[sq], occ));
+    } while ((occ = next_subset(Masks[sq], occ)));
 
     if (sq < 63)
       Attacks[sq + 1] = Attacks[sq] + TableSize;
@@ -72,13 +74,6 @@ namespace M42 {
     for (sq = 0; sq < 64; ++sq) {
       init_piece(true, sq);
       init_piece(false, sq);
-
-      KingAttacks[sq] = calc_king_attacks(SquareMask64[sq]);
-      KnightAttacks[sq] = calc_knight_attacks(SquareMask64[sq]);
-
-      // Initialize pawn attacks
-      PawnAttacks[0][sq] = calc_pawn_attacks<0>(SquareMask64[sq]);
-      PawnAttacks[1][sq] = calc_pawn_attacks<1>(SquareMask64[sq]);
     }
   }
 }

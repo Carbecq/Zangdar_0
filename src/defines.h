@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <atomic>
 
 /*******************************************************
  **	Généralités
@@ -28,15 +29,40 @@ static constexpr int MAX_MOVES  = 256;     // Number of moves in the candidate m
 static constexpr int HASH_SIZE  = 16 << 20;
 static constexpr int MAX_TIME   = 60*60*1000;   // 1 heure en ms
 
+static constexpr int DEFAULT_HASH_SIZE  = 128;
+static constexpr int MIN_HASH_SIZE      = 1;
+static constexpr int MAX_HASH_SIZE      = 1024;
+
+static constexpr int MAX_THREADS    = 32;
+
 static constexpr int INVALID        = 99999;
-static constexpr int INF            = 32767;
-static constexpr int MATE           = 32000;
-static constexpr int MAX_EVAL       = MATE - MAX_PLY;   // 31880
+static constexpr int INF            = 32000; //32767;
+static constexpr int MATE           = 30000; //32000;                        // Vice : INF_BOUND
+static constexpr int MAX_EVAL       = MATE - MAX_PLY;   // 31880    // Vice : ISMATE
 
 /*
  *   -INF     -MATE    -MAX_EVAL    |    MAX_EVAL     MATE     INF
  *                 xxxx                          xxxxx                      zone de mat
  */
+
+static constexpr int AB_BOUND = MATE;
+static constexpr int INF_BOUND = INF;
+
+static constexpr int LMRLegalMovesLimit = 4;
+static constexpr int LMRDepthLimit = 3;
+
+// Futility margins
+static constexpr int FutilityMargin[9] = {
+    0,
+        100, // depth 1
+        160, // depth 2
+        220, // depth 3
+        280, // depth 4
+        340, // depth 5
+        400, // depth 6
+        460, // depth 7
+        520, // depth 8
+};
 
 //=========================================
 // FEN debug positions
@@ -49,6 +75,11 @@ const std::string START_FEN       = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
 const std::string KIWIPETE        = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
 const std::string SILVER1         = "1rbq1rk1/1pp2pbp/p1np1np1/4p3/2PPP3/2N1BP2/PP1Q2PP/R1N1KB1R w KQ e6 ";
 const std::string SILVER2         = "r1b1k2r/ppppnppp/2n2q2/2b5/3NP3/2P1B3/PP3PPP/RN1QKB1R w KQkq - 0 1";
+const std::string QUIESC          = "2r1r1k1/pp1q1ppp/3p1b2/3P4/3Q4/5N2/PP2RPPP/4R1K1 w - - bm Qg4";  // test quiescence
+
+const std::string LCTII_01        = "r3kb1r/3n1pp1/p6p/2pPp2q/Pp2N3/3B2PP/1PQ2P2/R3K2R w KQkq -";
+const std::string FINE_70         = "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -";
+const std::string WAC_2           = "8/7p/5k2/5p2/p1p2P2/Pr1pPK2/1P1R3P/8 b - -";
 
 //=========================================
 
@@ -57,10 +88,10 @@ constexpr U64 ZERO = (U64) 0;
 
 //=========================================================
 
-
 extern std::string VERSION;
 extern std::string ascii(U32 s);
 
 extern std::vector<std::string> split(const std::string& s, char delimiter);
+extern void printlog(const std::string& message);
 
 #endif // DEFINES_H

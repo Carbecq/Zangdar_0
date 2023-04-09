@@ -106,14 +106,6 @@ constexpr U32 set_flag(const U32 _move, const int _flag) noexcept {
     return (_move & ~(MASK<8> << SHIFT_SCORE_INFO));
 }
 
-//[[nodiscard]] constexpr bool operator==(const Move &rhs) const noexcept {
-//    return data_ == rhs.data_;
-//}
-
-//[[nodiscard]] constexpr bool operator!=(const Move &rhs) const noexcept {
-//    return data_ != rhs.data_;
-//}
-
 [[nodiscard]] constexpr bool is_capturing(U32 move) noexcept {
     return (type(move) == MoveType::Capture || type(move) == MoveType::promo_capture || type(move) == MoveType::enpassant);
 }

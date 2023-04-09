@@ -2,15 +2,14 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
-#include "square.h"
 #include "defines.h"
 #include "bitboard.h"
+#include "square.h"
 
 
 namespace movegen {
 
 Bitboard BETWEEN_SQS[64][64];
-
 
 void calculate_squares_between()
 {
@@ -43,11 +42,6 @@ void calculate_squares_between()
             }
         }
     }
-
 }
 
-
-
-
-
-} // namespace movegen
+}

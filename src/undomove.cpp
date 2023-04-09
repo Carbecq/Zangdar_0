@@ -11,7 +11,7 @@ template <Color C> constexpr void Board::undo_move() noexcept
 
     game_clock--;
 
-    const auto &move    = the_history[game_clock].move;
+    const auto &move    = my_history[game_clock].move;
     const auto them     = !C;
     const auto to       = Move::dest(move);         //.to();
     const auto from     = Move::from(move);         //.from();
@@ -21,10 +21,10 @@ template <Color C> constexpr void Board::undo_move() noexcept
 
     // En passant
     // back : Returns a reference to the last element in the vector.
-    ep_square = the_history[game_clock].ep_square;
+    ep_square = my_history[game_clock].ep_square;
 
     // Halfmoves
-    halfmove_clock = the_history[game_clock].halfmove_clock;
+    halfmove_clock = my_history[game_clock].halfmove_clock;
 
     // Fullmoves
     fullmove_clock -= (C == Color::BLACK);
@@ -34,10 +34,10 @@ template <Color C> constexpr void Board::undo_move() noexcept
         x_king[C] = from;
 
     // Castling
-    castling = the_history[game_clock].castling;
+    castling = my_history[game_clock].castling;
 
 #ifdef HASH
-    hash = the_history[game_clock].hash;
+    hash = my_history[game_clock].hash;
 #endif
 
     // Remove piece
@@ -153,19 +153,19 @@ template <Color C> constexpr void Board::undo_nullmove() noexcept
     game_clock--;
 
     // En passant
-    ep_square = the_history[game_clock].ep_square;
+    ep_square = my_history[game_clock].ep_square;
 
     // Halfmoves
-    halfmove_clock = the_history[game_clock].halfmove_clock;
+    halfmove_clock = my_history[game_clock].halfmove_clock;
 
     // Fullmoves
     fullmove_clock -= (C == Color::BLACK);
 
     // Castling
-    castling = the_history[game_clock].castling;
+    castling = my_history[game_clock].castling;
 
 #ifdef HASH
-    hash = the_history[game_clock].hash;
+    hash = my_history[game_clock].hash;
 #endif
 
     assert(valid<C>());

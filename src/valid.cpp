@@ -97,7 +97,48 @@ template <Color C>
         }
     }
 
+//    std::cout << "11 " << std::endl;
 
+//    if (white_can_castle_k()) {
+//        if (!(Bitboard(king_position(Color::WHITE)) & bitboards::Rank1)) {
+//            return false;
+//        }
+//        if (piece_on(castle_rooks_from_[0]) != PieceType::Rook) {
+//            return false;
+//        }
+//    }
+  //  std::cout << "12 " << std::endl;
+
+//    if (white_can_castle_q()) {
+//        if (!(Bitboard(king_position(Color::WHITE)) & bitboards::Rank1)) {
+//            return false;
+//        }
+//        if (piece_on(castle_rooks_from_[1]) != PieceType::Rook) {
+//            return false;
+//        }
+//    }
+ //   std::cout << "13 " << std::endl;
+
+//    if (black_can_castle_k()) {
+//        if (!(Bitboard(king_position(Color::BLACK)) & bitboards::Rank8)) {
+//            return false;
+//        }
+//        if (piece_on(castle_rooks_from_[2]) != PieceType::Rook) {
+//            return false;
+//        }
+//    }
+ //   std::cout << "14 " << std::endl;
+
+//    if (black_can_castle_q()) {
+//        if (!(Bitboard(king_position(Color::BLACK)) & bitboards::Rank8)) {
+//            return false;
+//        }
+//        if (piece_on(castle_rooks_from_[3]) != PieceType::Rook) {
+//            return false;
+//        }
+//    }
+
+    //   std::cout << "valid fin " << std::endl;
 
     return true;
 }

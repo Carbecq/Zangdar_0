@@ -16,9 +16,9 @@ public:
     size_t size() const { return count; }
     void swap(size_t i, size_t j);
 
-    std::array<U32, MAX_MOVES>  moves;
-    std::array<I32, MAX_MOVES>  values;
-    size_t                      count;
+    std::array<MOVE, MAX_MOVES>  moves;
+    std::array<I32,  MAX_MOVES>  values;
+    size_t                       count;
 
 
 private:

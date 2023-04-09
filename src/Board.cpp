@@ -1,13 +1,5 @@
 #include <sstream>
 #include "Board.h"
-#include "bitmask.h"
-
-Bitboard RankMask64[64] = {0};
-Bitboard FileMask64[64] = {0};
-Bitboard DiagonalMask64[64] = {0};
-Bitboard AntiDiagonalMask64[64] = {0};
-Bitboard SquareMask64[64] = {0};
-
 
 //===================================================
 //! \brief  Constructeur
@@ -15,21 +7,14 @@ Bitboard SquareMask64[64] = {0};
 Board::Board() noexcept
 {
     init_allmask();
+    init_bitmasks();
 }
 
 Board::Board(const std::string &fen) noexcept
 {
     init_allmask();
+    init_bitmasks();
     set_fen(fen, false);
-}
-
-
-//===================================================
-//! \brief  Remise à zéro
-//---------------------------------------------------
-void Board::reset()
-{
-
 }
 
 //===================================================
@@ -101,28 +86,35 @@ std::string Board::display() const noexcept
         ss << "EP       : " << square_name[ep()] << '\n';
     }
     ss <<     "Turn     : " << (turn() == Color::WHITE ? 'w' : 'b') << '\n';
-    ss <<     "Hash     : " << hh;
-
+    ss <<     "Hash     : " << hh << "\n";
+    ss <<     "Fen      : " << get_fen();
     return(ss.str());
 }
 
-//===========================================================================
-// Regarde dans la liste des coups si le coup de la Principal Variation
-// existe. Dans ce cas, on donne à ce coup un gros bonus de façon à ce
-// qu'il soit joué en premier par la fonction de recherche.
-//----------------------------------------------------------------------------
-void Board::pv_move(MoveList& move_list, U32 PvMove)
+void Board::clear() noexcept
 {
-    // https://www.chessprogramming.org/Principal_Variation
+    colorPiecesBB[0] = 0ULL;
+    colorPiecesBB[1] = 0ULL;
+    typePiecesBB[0] = 0ULL;
+    typePiecesBB[1] = 0ULL;
+    typePiecesBB[2] = 0ULL;
+    typePiecesBB[3] = 0ULL;
+    typePiecesBB[4] = 0ULL;
+    typePiecesBB[5] = 0ULL;
 
-    for (int index = 0; index < move_list.count; index++)
-    {
-        if( move_list.moves[index] == PvMove)
-        {
-            move_list.values[index] = ( 2000000 );
-            break;
-        }
-    }
+    cpiece.fill(PieceType::NO_TYPE);
+
+    halfmove_clock  = 0;
+    fullmove_clock  = 1;
+    game_clock      = 0;
+    hash            = 0;
+
+    ep_square    = NO_SQUARE;
+    hash         = 0x0;
+    castling     = 0;
+    side_to_move = Color::WHITE;
+
+    my_history.fill(UndoInfo{0, 0, 0, 0, 0});
 }
 
 template bool Board::is_in_check<WHITE>()     const noexcept;

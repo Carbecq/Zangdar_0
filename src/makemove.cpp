@@ -27,11 +27,11 @@ constexpr U32 castle_mask[64] = {
 template <Color C> constexpr void Board::make_move(const U32 move) noexcept
 {
     const auto them     = !C;
-    const auto to       = Move::dest(move);         //.to();
-    const auto from     = Move::from(move);         //.from();
-    const auto piece    = Move::piece(move);        //.piece();
-    const auto captured = Move::captured(move);     //.captured();
-    const auto promo    = Move::promotion(move);    //.promotion();
+    const auto to       = Move::dest(move);
+    const auto from     = Move::from(move);
+    const auto piece    = Move::piece(move);
+    const auto captured = Move::captured(move);
+    const auto promo    = Move::promotion(move);
 #ifndef NDEBUG
     // on ne passe ici qu'en debug
     const auto ep_old   = ep_square;
@@ -46,7 +46,7 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
     assert(cpiece[from] == piece);
 
     // Sauvegarde des caractéristiques de la position
-    the_history[game_clock] = UndoInfo{hash, move, ep_square, halfmove_clock, castling} ;
+    my_history[game_clock] = UndoInfo{hash, move, ep_square, halfmove_clock, castling} ;
 
     // La prise en passant n'est valable que tout de suite
     // Il faut donc la supprimer
@@ -244,6 +244,27 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
         cpiece[ksc_castle_rook_to[C]]   = PieceType::Rook;
 
 
+        // No overlap between any pieces and the path of the king, exclude the castling rook
+        //        assert(!(occupied() & squares_between(from, castle_king_to[us * 2]) & ~Bitboard(ksc_rook_to[C])));
+        // No overlap between any pieces and the path of the rook, exclude the castled king
+        //        assert(
+        //                    !(occupied() & squares_between(castle_rooks_from_[us * 2], ksc_rook_to[C]) & ~occupancy(PieceType::King)));
+
+        // Check if rook is at destination
+        assert(cpiece[ksc_castle_rook_to[C]] == PieceType::Rook);
+        // Check that king is on its destination square
+        assert(cpiece[ksc_castle_king_to[C]] == PieceType::King);
+
+        // Start square of king is either empty, its own, or the rook's target square
+        //      assert(piece_on(from) == PieceType::NO_TYPE || from == ksc_rook_to[C] || from == castle_king_to[us * 2]);
+        // Start square of rook is either empty, its own, or the king's target square
+        //        assert(piece_on(castle_rooks_from_[us * 2]) == PieceType::NO_TYPE ||
+        //                castle_rooks_from_[us * 2] == ksc_rook_to[C] ||
+        //                castle_rooks_from_[us * 2] == castle_king_to[us * 2]);
+
+        // Check if all squares touched by king are not attacked
+        //        assert(!(squares_attacked(them) &
+        //                 (squares_between(from, castle_king_to[us * 2]) | from | pieces(us, PieceType::King))));
 
         break;
 
@@ -278,6 +299,28 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
         cpiece[qsc_castle_rook_from[C]] = PieceType::NO_TYPE;
         cpiece[qsc_castle_rook_to[C]]   = PieceType::Rook;
 
+        // No overlap between any pieces and the path of the king, exclude the castling rook
+        //       assert(!(occupied() & squares_between(from, castle_king_to[us * 2 + 1]) & ~Bitboard(qsc_rook_to[C])));
+        // No overlap between any pieces and the path of the rook, exclude the castled king
+        //        assert(!(occupied() & squares_between(castle_rooks_from_[us * 2 + 1], qsc_rook_to[C]) &
+        //               ~occupancy(PieceType::King)));
+
+        // Check if rook is at destination
+        //        assert(piece_on(qsc_rook_to[C]) == PieceType::Rook);
+        // Check that king is on its destination square
+        //        assert(piece_on(castle_king_to[us * 2 + 1]) == PieceType::King);
+        //        assert(castle_king_to[us * 2 + 1] == pieces(us, PieceType::King).hsb());
+
+        // Start square of rook is either empty, its own, or the king's target square
+        //ZZ        assert(piece_on(castle_rooks_from_[us * 2 + 1]) == PieceType::NO_TYPE ||
+        //                castle_rooks_from_[us * 2 + 1] == qsc_rook_to[C] ||
+        //                castle_rooks_from_[us * 2 + 1] == castle_king_to[us * 2 + 1]);
+        // Start square of king is either empty, its own, or the rook's target square
+        //        assert(piece_on(from) == PieceType::NO_TYPE || from == qsc_rook_to[C] || from == castle_king_to[us * 2 + 1]);
+
+        // Check if all squares touched by king are not attacked
+        //        assert(!(squares_attacked(them) &
+        //                 (squares_between(from, castle_king_to[us * 2 + 1]) | from | pieces(us, PieceType::King))));
 
         break;
 
@@ -392,7 +435,7 @@ template <Color C> constexpr void Board::make_nullmove() noexcept
 {
     // Sauvegarde des caractéristiques de la position
     // NullMove = 0
-    the_history[game_clock] = UndoInfo{hash, 0, ep_square, halfmove_clock, castling} ;
+    my_history[game_clock] = UndoInfo{hash, 0, ep_square, halfmove_clock, castling};
 
     // La prise en passant n'est valable que tout de suite
     // Il faut donc la supprimer

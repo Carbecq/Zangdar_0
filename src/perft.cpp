@@ -55,8 +55,8 @@ template <Color C> [[nodiscard]] std::uint64_t Board::divide(const int depth) no
         make_move<C>(move);
         total[index] = perft<~C>(depth - 1);
         nodes += total[index];
-         undo_move<C>();
-        printf(" %s : % llu \n", Move::name(move).c_str(),  total[index]);
+        undo_move<C>();
+        std::cout << Move::name(move) << " : " << total[index] << std::endl;
     }
 
     return nodes;

@@ -1,28 +1,28 @@
 #include "Board.h"
 
 //=================================================================
-//! \brief  Ajout d'un coup tranquille à la liste des coups
+//! \brief  Ajoute un coup tranquille à la liste des coups
 //!
+//! \param[in]  type    type du coup
+//! \param[in]  ml      MoveListde stockage des coups
 //! \param[in]  from    position de départ de la pièce
-//! \param[in]  to      position d'arrivée de la pièce
-//! \param[in]  flags   flags déterminant le type du coup
-//! \param[out] index   index dans la pile des coups à partir duquel
-//!                     on va ajouter les coups
+//! \param[in]  dest    position d'arrivée de la pièce
+//! \param[in]  piece   type de la pièce jouant
 //-----------------------------------------------------------------
 void Board::add_quiet_move(MoveType type, MoveList& ml, int from, int dest, PieceType piece)  const noexcept
 {
     ml.moves[ml.count++] = Move::CODE(type, from, dest, piece, PieceType::NO_TYPE, PieceType::NO_TYPE);
-
 }
 
 //=================================================================
-//! \brief  Ajout d'un coup de capture à la liste des coups
+//! \brief  Ajoute un coup de capture à la liste des coups
 //!
+//! \param[in]  type    type du coup
+//! \param[in]  ml      MoveListde stockage des coups
 //! \param[in]  from    position de départ de la pièce
-//! \param[in]  to      position d'arrivée de la pièce
-//! \param[in]  flags   flags déterminant le type du coup
-//! \param[out] index   index dans la pile des coups à partir duquel
-//!                     on va ajouter les coups
+//! \param[in]  dest    position d'arrivée de la pièce
+//! \param[in]  piece   type de la pièce jouant
+//! \param[in]  captured   type de la pièce capturée
 //-----------------------------------------------------------------
 void Board::add_capture_move(MoveType type, MoveList& ml, int from, int dest, PieceType piece, PieceType captured) const noexcept
 {
@@ -30,13 +30,13 @@ void Board::add_capture_move(MoveType type, MoveList& ml, int from, int dest, Pi
 }
 
 //=================================================================
-//! \brief  Ajout d'un coup tranquille à la liste des coups
+//! \brief  Ajoute un coup tranquille de promotion à la liste des coups
 //!
+//! \param[in]  type    type du coup
+//! \param[in]  ml      MoveListde stockage des coups
 //! \param[in]  from    position de départ de la pièce
-//! \param[in]  to      position d'arrivée de la pièce
-//! \param[in]  flags   flags déterminant le type du coup
-//! \param[out] index   index dans la pile des coups à partir duquel
-//!                     on va ajouter les coups
+//! \param[in]  dest    position d'arrivée de la pièce
+//! \param[in]  promo   type de la pièce promue
 //-----------------------------------------------------------------
 void Board::add_quiet_promotion(MoveType type, MoveList& ml, int from, int dest, PieceType promo) const noexcept
 {
@@ -44,13 +44,15 @@ void Board::add_quiet_promotion(MoveType type, MoveList& ml, int from, int dest,
 }
 
 //=================================================================
-//! \brief  Ajout d'un coup tranquille à la liste des coups
+//! \brief  Ajoute un coup de capture et de promotion à la liste des coups
 //!
+//! \param[in]  type    type du coup
+//! \param[in]  ml      MoveListde stockage des coups
 //! \param[in]  from    position de départ de la pièce
-//! \param[in]  to      position d'arrivée de la pièce
-//! \param[in]  flags   flags déterminant le type du coup
-//! \param[out] index   index dans la pile des coups à partir duquel
-//!                     on va ajouter les coups
+//! \param[in]  dest    position d'arrivée de la pièce
+//! \param[in]  piece   type de la pièce jouant
+//! \param[in]  captured   type de la pièce capturée
+//! \param[in]  promo   type de la pièce promue
 //-----------------------------------------------------------------
 void Board::add_capture_promotion(MoveType type, MoveList& ml, int from, int dest, PieceType captured, PieceType promo) const noexcept
 {
@@ -60,9 +62,9 @@ void Board::add_capture_promotion(MoveType type, MoveList& ml, int from, int des
 
 
 
-/* Append a move to an array of moves */
-
-/* Append all moves from a square */
+//===================================================================
+//! \brief  Ajoute une série de coups
+//-------------------------------------------------------------------
 void Board::push_quiet_moves(MoveList& ml, Bitboard attack, const int from)
 {
     int to;
@@ -103,7 +105,8 @@ void Board::push_piece_capture_moves(MoveList& ml, Bitboard attack, const int fr
 }
 
 //--------------------------------------------------------------------
-/* Append all promotions from a direction */
+//  Promotions
+
 void Board::push_quiet_promotions(MoveList& ml, Bitboard attack, const int dir) {
     int to;
 
@@ -134,8 +137,10 @@ void Board::push_capture_promotion(MoveList& ml, const int from, const int to) {
     add_capture_promotion(MoveType::promo_capture, ml, from, to, cpiece[to], PieceType::Rook);
     add_capture_promotion(MoveType::promo_capture, ml, from, to, cpiece[to], PieceType::Bishop);
 }
+
 //--------------------------------------
-/* Append all pawn moves from a direction */
+//  Coups de pions
+
 void Board::push_pawn_quiet_moves(MoveType type, MoveList& ml, Bitboard attack, const int dir) {
     int to;
 
@@ -144,7 +149,6 @@ void Board::push_pawn_quiet_moves(MoveType type, MoveList& ml, Bitboard attack, 
         add_quiet_move(type, ml, to - dir, to, PieceType::Pawn);
     }
 }
-/* Append all pawn moves from a direction */
 void Board::push_pawn_capture_moves(MoveList& ml, Bitboard attack, const int dir) {
     int to;
 

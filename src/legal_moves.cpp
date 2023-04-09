@@ -49,7 +49,6 @@ constexpr void Board::legal_moves(MoveList& ml) noexcept
     //  Calcul des pièces clouées, et des échecs
     //  algorithme de Surge
     //-----------------------------------------------------------------------------------------
-// https://github.com/official-stockfish/Stockfish/blob/master/src/position.cpp
 
     int s;
     Bitboard b1;
@@ -120,8 +119,6 @@ constexpr void Board::legal_moves(MoveList& ml) noexcept
         // not in check: castling & pinned pieces moves
 
         // castling
- //       if (do_quiet)
-  //      {
             if (can_castle_k<C>())
             {
                 /*  movegen::squares_between(ksq, ksc_castle_king_to[us])   : case F1
@@ -151,7 +148,6 @@ constexpr void Board::legal_moves(MoveList& ml) noexcept
                 if (king_path_clear && rook_path_clear && !(squares_attacked<O>() & king_path))
                     add_quiet_move(MoveType::qsc, ml, K, qsc_castle_king_to[C], PieceType::King);
             }
-   //     }
 
         // pawn (pinned)
         pieceBB = typePiecesBB[Pawn] & pinnedBB;
@@ -291,15 +287,12 @@ constexpr void Board::legal_moves(MoveList& ml) noexcept
     push_capture_promotions(ml, attackBB & PROMOTION_RANK[C], pawn_right);
     push_pawn_capture_moves(ml, attackBB & ~PROMOTION_RANK[C], pawn_right);
 
- //   if (do_quiet)
- //   {
         attackBB = (C ? pieceBB >> 8 : pieceBB << 8) & emptyBB;
         push_quiet_promotions(ml, attackBB & PROMOTION_RANK[C], pawn_push);
 
         push_pawn_quiet_moves(MoveType::Normal, ml, attackBB & ~PROMOTION_RANK[C], pawn_push);
         attackBB = (C ? (((pieceBB & RankMask8[6]) >> 8) & ~occupiedBB) >> 8 : (((pieceBB & RankMask8[1]) << 8) & ~occupiedBB) << 8) & emptyBB;
         push_pawn_quiet_moves(MoveType::Double, ml, attackBB, 2 * pawn_push);
- //   }
 
     // knight
 

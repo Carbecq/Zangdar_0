@@ -29,7 +29,6 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
     //  Calcul des pièces clouées, et des échecs
     //  algorithme de Surge
     //-----------------------------------------------------------------------------------------
-// https://github.com/official-stockfish/Stockfish/blob/master/src/position.cpp
 
     int s;
     Bitboard b1;
@@ -140,15 +139,12 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
     push_capture_promotions(ml, attackBB & PROMOTION_RANK[C], pawn_right);
     push_pawn_capture_moves(ml, attackBB & ~PROMOTION_RANK[C], pawn_right);
 
- //   if (do_quiet)
- //   {
         attackBB = (C ? pieceBB >> 8 : pieceBB << 8) & emptyBB;
         push_quiet_promotions(ml, attackBB & PROMOTION_RANK[C], pawn_push);
 
         push_pawn_quiet_moves(MoveType::Normal, ml, attackBB & ~PROMOTION_RANK[C], pawn_push);
         attackBB = (C ? (((pieceBB & RankMask8[6]) >> 8) & ~occupiedBB) >> 8 : (((pieceBB & RankMask8[1]) << 8) & ~occupiedBB) << 8) & emptyBB;
         push_pawn_quiet_moves(MoveType::Double, ml, attackBB, 2 * pawn_push);
- //   }
 
     // knight
 

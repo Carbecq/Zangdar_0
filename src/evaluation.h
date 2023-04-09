@@ -1,19 +1,14 @@
 #ifndef EVALUATION_H
 #define EVALUATION_H
 
-#include "color.h"
-#include "Board.h"
-#include "movegen.h"
-
 // Valeur des pièces
 //  mg = middle game
 //  eg = end game
 
 
+
 constexpr int mg_value[6] = {82, 337, 365, 477, 1025, 0};
 constexpr int eg_value[6] = {94, 281, 297, 512,  936, 0};
-
-
 
 constexpr int mg_pawn_table[64] = {
     0,     0,     0,     0,     0,     0,     0,     0,         // A1=0 ... H1=7
@@ -148,17 +143,56 @@ constexpr int eg_king_table[64] = {
 };
 
 
+// Bonus - Malus
 
+// Pawn
+constexpr int mg_isolated_pawn = -5;
+constexpr int eg_isolated_pawn = -10;
 
+constexpr int mg_doubled_pawn  = -5;
+constexpr int eg_doubled_pawn  = -10;
 
+constexpr int mg_backward_pawn = -5;
+constexpr int eg_backward_pawn = -5;
 
+constexpr int mg_passed_pawn[8] = { 0, 10, 30, 50, 75, 100, 150, 200 };
+constexpr int eg_passed_pawn[8] = { 0, 10, 30, 50, 75, 100, 150, 200 };
 
+// Mobility
+constexpr int knight_unit = 4;
+constexpr int bishop_unit = 6;
+constexpr int rook_unit   = 7;
+constexpr int queen_unit  = 13;
 
-//=============================================================
+constexpr int mg_knight_mobility = 4;
+constexpr int eg_knight_mobility = 4;
 
+constexpr int mg_bishop_mobility = 5;
+constexpr int eg_bishop_mobility = 5;
 
+constexpr int mg_rook_mobility   = 2;
+constexpr int eg_rook_mobility   = 4;
 
+constexpr int mg_queen_mobility  = 1;
+constexpr int eg_queen_mobility  = 2;
 
+// Bonuses
+constexpr int mg_bishop_pair = 50;
+constexpr int eg_bishop_pair = 50;
+
+constexpr int move_bonus = 25;
+
+constexpr bool UseOpenFile = true;
+constexpr int mg_semiopen_file = 10;
+constexpr int eg_semiopen_file = 10;
+constexpr int mg_open_file = 20;
+constexpr int eg_open_file = 20;
+constexpr int mg_king_semiopen_file = 10;
+constexpr int mg_king_open_file     = 20;
+
+// King safety
+
+constexpr int king_shield = 5;
 
 
 #endif // EVALUATION_H

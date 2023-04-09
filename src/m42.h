@@ -28,9 +28,6 @@
 #endif
 
 namespace M42 {
-  extern uint64_t KnightAttacks[64];
-  extern uint64_t KingAttacks[64];
-  extern uint64_t PawnAttacks[2][64];
   extern uint64_t ThisAndNextSq[64];
   extern uint64_t PrevSquares[64];
 
@@ -115,48 +112,6 @@ namespace M42 {
     0x007FB65AFABFB3B5ULL,
   };
 
-  inline uint64_t king_attacks(int sq) {
-    return KingAttacks[sq];
-  }
-
-  inline uint64_t calc_king_attacks(uint64_t kings)
-  {
-    uint64_t attacks = ((kings << 1) &~FileAMask) | ((kings >> 1) &~FileHMask);
-    kings |= attacks;
-    return attacks | (kings << 8) | (kings >> 8);
-  }
-
-  inline uint64_t knight_attacks(int sq) {
-    return KnightAttacks[sq];
-  }
-
-  inline uint64_t calc_knight_attacks(uint64_t knights)
-  {
-    uint64_t const h1 = ((knights >> 1) & 0x7F7F7F7F7F7F7F7FULL)
-      | ((knights << 1) & 0xFEFEFEFEFEFEFEFEULL);
-    uint64_t const h2 = ((knights >> 2) & 0x3F3F3F3F3F3F3F3FULL)
-      | ((knights << 2) & 0xFCFCFCFCFCFCFCFCULL);
-    return (h1 << 16) | (h1 >> 16) | (h2 << 8) | (h2 >> 8);
-  }
-
-  inline uint64_t pawn_attacks(unsigned cl, int sq) {
-    return PawnAttacks[cl][sq];
-  }
-
-  template <unsigned Cl>
-  inline uint64_t calc_pawn_attacks(uint64_t pawns)
-  {
-    if (Cl == 0) {  // White
-      return ((pawns << 7) &~FileHMask) | ((pawns << 9) &~FileAMask);
-    }
-    else if (Cl == 1) {  // Black
-      return ((pawns >> 7) &~FileAMask) | ((pawns >> 9) &~FileHMask);
-    }
-    else {
-      assert(false);
-      return 0;
-    }
-  }
 
   inline uint64_t rank_attacks(int sq, uint64_t occ)
   {

@@ -28,7 +28,6 @@ constexpr void Board::legal_captures(MoveList& ml) noexcept
     //  Calcul des pièces clouées, et des échecs
     //  algorithme de Surge
     //-----------------------------------------------------------------------------------------
-// https://github.com/official-stockfish/Stockfish/blob/master/src/position.cpp
 
     int s;
     Bitboard b1;
