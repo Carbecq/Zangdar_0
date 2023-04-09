@@ -16,19 +16,18 @@ I also use the M42 library for generating attacks; and took inspiration from the
 At present, Zangdar can play honestly. I done several matches, and I think Zangdar has an elo of about 2550.
 It has the following features :
 
-+ **language** 
++ **Language** 
   - Written in C++17
 
-+ **board** 
++ **Board** 
   - Magic Bitboard
 
-+ **search**
++ **Search**
   - Iterative Deepening
   - Alpha-Beta  , Fail Soft
   - Quiescence
   - MVVVLA
   - Killer Heuristic
-  - Principal Variation Search
   - Transposition Table, with 4 buckets
   - Null Move 
   - Late Move Reduction
@@ -37,12 +36,12 @@ It has the following features :
 + **Parallel**
   - can use several threads
 
-+ **evaluation**
++ **Evaluation**
   - Material
   - Piece/Square Table
   - Positional bonus
   - Mobility
 
-+ **communication**
++ **Communication**
   - UCI
   - Options to change hash size, Threads number
