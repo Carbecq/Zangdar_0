@@ -13,7 +13,7 @@ Why Zangdar ? Well look for the Naheulbeuk dungeon !!
 I would like to thank specially the authors of Vice, TSCP, Gerbil. They helped me a lot understand several aspects of programmation.
 I also use the M42 library for generating attacks; and took inspiration from the Libchess library. 
 
-At present, Zangdar can play honestly. I done several matches, and I think Zangdar has an elo of about 2400.
+At present, Zangdar can play honestly. I done several matches, and I think Zangdar has an elo of about 2550.
 It has the following features :
 
 + **language** 
