@@ -30,11 +30,19 @@ It has the following features :
   - Killer Heuristic
   - Principal Variation Search
   - Transposition Table, with 4 buckets
-  - Null Move
+  - Null Move 
+  - Late Move Reduction
+  - Razoring
+
++ **Parallel**
+  - can use several threads
 
 + **evaluation**
   - Material
   - Piece/Square Table
+  - Positional bonus
+  - Mobility
 
 + **communication**
   - UCI
+  - Options to change hash size, Threads number
