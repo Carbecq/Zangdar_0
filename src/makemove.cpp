@@ -410,11 +410,8 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
 
     if (test_hash != hash)
     {
-        std::string s = Move::name(move);
-        std::cout << s << "  : hash pb : hash = " << hash << " ; calc = " << test_hash << std::endl;
+        std::cout << Move::name(move) << "  : hash pb : hash = " << hash << " ; calc = " << test_hash << std::endl;
         std::cout << display() << std::endl << std::endl;
-
-        exit;
     }
 #endif
 #endif

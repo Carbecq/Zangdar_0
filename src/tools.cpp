@@ -26,15 +26,6 @@ std::vector<std::string> split(const std::string& s, char delimiter)
 }
 
 
-std::string ascii(U32 s)
-{
-    char a = s%16 + 'a';
-    char b = s/16 + '1';
-    std::string r = std::string(1, a) + std::string(1, b);
-    return(r);
-}
-
-
 //======================================
 //! \brief Ecriture en binaire
 //--------------------------------------
@@ -164,7 +155,9 @@ void inversion()
 void printlog(const std::string& message)
 {
     std::ofstream myfile;
-      myfile.open("debug.txt", std::ios_base::app); // append instead of overwrite
+    std::string str = HOME;
+    str += "/debug.txt";
+      myfile.open(str, std::ios_base::app); // append instead of overwrite
       myfile << message << std::endl;
       myfile.close();
 }

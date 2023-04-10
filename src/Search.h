@@ -36,7 +36,7 @@ public:
 
     // Fonction UCI : Search_Uci.cpp
     void stop();
-    MOVE get_best() const { return best_move; }
+    MOVE get_best() const { return the_best_move; }
     void test_value(const std::string &fen);
 
     U64  nodes;
@@ -49,8 +49,8 @@ private:
     Board   my_board;
     Timer   my_timer;
     int     output;
-    MOVE    best_move;
-    int     best_score;
+    MOVE    the_best_move;
+    int     the_best_score;
     bool    logUci;
     OrderingInfo my_orderingInfo;
 

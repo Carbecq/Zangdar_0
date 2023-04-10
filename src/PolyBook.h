@@ -28,6 +28,8 @@ public:
     PolyBook(const std::string& name);
     ~PolyBook();
 
+    void setPath(const std::string& m_path) { path = m_path; }
+
     U64  calculate_hash(const Board &board);
     void init(const std::string &name);
     void clean();
@@ -37,8 +39,11 @@ public:
 
 
 private:
+    static constexpr int MAX_BOOK_MOVES = 32;   // nombre maximum de coups recherchés pour une position donnée
+
     U32             nbr_entries = 0;
     PolyBookEntry*  entries = nullptr;
+    std::string     path;
 
 
     constexpr U16 endian_swap_u16(U16 x) noexcept

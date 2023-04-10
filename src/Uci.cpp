@@ -45,7 +45,7 @@ void Uci::run()
      * Quand dans Arena, on fait "Configure", on fait apparaitre une interface
      * contenant les options données ici.
      * Lorsque l'utilisateur va agir sur une de ces options,
-     * Arena va envoyer la commande "setopton.." au programme.
+     * Arena va envoyer la commande "setoption.." au programme.
      *
      */
 
@@ -53,6 +53,7 @@ void Uci::run()
     std::cout << "option name Clear Hash type button" << std::endl;
     std::cout << "option name Threads type spin default 1 min 1 max " << MAX_THREADS << std::endl;
     std::cout << "option name OwnBook type check default false" << std::endl;
+    std::cout << "option name BookPath type string default " << "./" << std::endl;
 
     std::cout << "uciok" << std::endl;
 
@@ -478,7 +479,11 @@ setoption name <id> [value <x>]
             std::string path;
             iss >> path;
 
-            //    Book->init(path);
+#ifdef DEBUG_LOG
+            sprintf(message, "Uci::parse_options : BookPath (%s) ", path.c_str());
+            printlog(message);
+#endif
+            Book.setPath(path);
         }
     }
     else

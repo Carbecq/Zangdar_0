@@ -48,7 +48,7 @@ template <Color C> [[nodiscard]] std::uint64_t Board::divide(const int depth) no
     MoveList ml; // = the_move_list[ply];
     legal_moves<C>(ml);
 
-    for (int index = 0; index < ml.count; index++)
+    for (size_t index = 0; index < ml.count; index++)
     {
         move = ml.moves[index];
 

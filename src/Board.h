@@ -102,8 +102,6 @@ public:
     [[nodiscard]] std::string get_fen() const noexcept;
     void mirror_fen(const std::string &fen, bool logTactics);
 
-    void test_rays();
-
     [[nodiscard]] constexpr int get_halfmove_clock() const noexcept { return halfmove_clock; }
     [[nodiscard]] constexpr int get_game_clock() const noexcept { return game_clock; }
     [[nodiscard]] constexpr std::size_t get_fullmove_clock() const noexcept
@@ -173,9 +171,6 @@ public:
     void push_capture_promotion(MoveList &ml, const int from, const int to);
     void push_pawn_quiet_moves(MoveType type, MoveList &ml, Bitboard attack, const int dir);
     void push_pawn_capture_moves(MoveList &ml, Bitboard attack, const int dir);
-
-    template<Color C>
-    void generate_checkers();
 
     template<Color C>
     [[nodiscard]] std::uint64_t perft(const int depth) noexcept;
@@ -382,18 +377,11 @@ public:
     //    void stop();
     //    void quit();
 
-    //=================================== recherche
-    void init();
-
     //=================================== evaluation
     [[nodiscard]] int evaluate();
     template<Color C>
     constexpr void evaluate_0(int &mg, int &eg, int &gamePhase);
 
-    [[nodiscard]] bool MaterialDraw() const;
-
-    void init_mask();
-    void generate_checkers();
     void init_allmask();
     void init_bitmasks();
 

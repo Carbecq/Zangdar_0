@@ -17,7 +17,7 @@ Search::Search(const Board &m_board, const Timer &m_timer, OrderingInfo &m_info,
     , my_board(m_board)
     , my_timer(m_timer)
     , output(4)
-    , best_move(0)
+    , the_best_move(0)
     , logUci(m_log)
     , my_orderingInfo(m_info)
 {
@@ -67,8 +67,6 @@ void Search::show_uci_result(int depth, int best_score, U64 elapsed, MOVE *pv) c
 #ifdef PRETTY
     std::cout.imbue(std::locale(std::locale::classic(), new MyNumPunct));
     int l = 12;
-#else
-    int l = 10;
 #endif
 
     std::cout << "info ";
@@ -97,7 +95,7 @@ void Search::show_uci_result(int depth, int best_score, U64 elapsed, MOVE *pv) c
         // time     : the time searched in ms
 
 #ifdef PRETTY
-        std::cout << "score cp " << std::right << std::setw(4) << best_score; // the score from the engine's point of view in centipawns
+        std::cout << "score cp " << std::right << std::setw(4) << m_best_score; // the score from the engine's point of view in centipawns
         std::cout << " depth " << std::setw(2) << depth
                   //             << " seldepth " << std::setw(2) << seldepth
                   << " nodes " << std::setw(l) << all_nodes

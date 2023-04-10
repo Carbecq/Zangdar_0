@@ -28,7 +28,7 @@ void Search::iterDeep()
     new_search();
     my_timer.start();
     my_timer.setup(C);
-    best_move = 0;
+    the_best_move = 0;
 
     int max_depth = my_timer.getSearchDepth();
     int score;
@@ -61,7 +61,7 @@ void Search::iterDeep()
         // L'itération s'est terminée sans problème
         // On peut mettre à jour les infos UCI
         current_depth = depth;
-        best_move = pv[0];
+        the_best_move = pv[0];
         U64 elapsed = 0; // durée en millisecondes
         bool shouldStop = my_timer.finishOnThisDepth(elapsed);
 
@@ -80,7 +80,7 @@ void Search::iterDeep()
 
     if (threadID == 0) {
         if (logUci) {
-            show_uci_best(best_move);
+            show_uci_best(the_best_move);
             my_timer.show_time();
         }
 
@@ -286,9 +286,9 @@ int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bo
     MovePicker movePicker(ply, tt_move, &my_orderingInfo, &board, &move_list);
 
     int legalMoves = 0;
-    int ttFlag = HASH_ALPHA;
+//    int ttFlag = HASH_ALPHA;
     int best_score = -INF; // meilleur coup local
-    MOVE best_move = 0;
+//    MOVE best_move = 0;
     MOVE move;
 
 

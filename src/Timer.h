@@ -44,7 +44,7 @@ private:
 
     // gives the exact moment this search was started.
     std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
-    U64 timeForThisMove = 0;   // temps en ms
+    int timeForThisMove = 0;   // temps en ms
     int searchDepth;
 
 

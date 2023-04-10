@@ -2,4 +2,4 @@
 
 // changer aussi Zangdar-2.pro
 
-std::string VERSION = "2.14.03";
+std::string VERSION = "2.14.04";

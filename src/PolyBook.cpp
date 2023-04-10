@@ -3,11 +3,10 @@
 #include "piece.h"
 #include <string>
 #include "movegen.h"
-#include "Search.h"
 #include "ThreadPool.h"
 
 //=================================================
-//! \brief  Destructeur
+//! \brief  Constructeur
 //-------------------------------------------------
 PolyBook::PolyBook()
 {
@@ -16,15 +15,16 @@ PolyBook::PolyBook()
     sprintf(message, "PolyBook::constructeur  ");
     printlog(message);
 #endif
-    entries = nullptr;
+    entries     = nullptr;
     nbr_entries = 0;
+    path        = "./";
 
     if (threadPool.get_useBook())
         init("book.bin");
 }
 
 //=================================================
-//! \brief  Destructeur
+//! \brief  Constructeur
 //-------------------------------------------------
 PolyBook::PolyBook(const std::string& name)
 {
@@ -33,8 +33,9 @@ PolyBook::PolyBook(const std::string& name)
     sprintf(message, "PolyBook::constructeur; name : %s ", name.c_str());
     printlog(message);
 #endif
-    entries = nullptr;
+    entries     = nullptr;
     nbr_entries = 0;
+    path        = "./";
 
     if (threadPool.get_useBook())
         init(name);
@@ -121,8 +122,7 @@ void PolyBook::init(const std::string &name)
     std::size_t file_size;
     threadPool.set_useBook(false);
 
-    std::string     str_home = HOME;
-    std::string     str_file = str_home + "book/" + name;
+    std::string     str_file = path + "/" + name;
     std::ifstream   file;
 
     file.open(str_file, std::ifstream::in | std::ifstream::binary);
@@ -168,7 +168,7 @@ void PolyBook::init(const std::string &name)
     else
     {
 #ifdef DEBUG_LOG
-        sprintf(message, "PolyBook::init : Read failed : only %d could be read", file.gcount());
+        sprintf(message, "PolyBook::init : Read failed : only %td could be read", file.gcount());
         printlog(message);
 #endif
     }
@@ -213,8 +213,7 @@ MOVE PolyBook::get_move(const Board& board)
 
     PolyBookEntry *entry;
     U16 move;
-    const int MAXBOOKMOVES = 32;
-    MOVE bookMoves[MAXBOOKMOVES];
+    MOVE bookMoves[MAX_BOOK_MOVES];
     MOVE tempMove = 0;
     int count = 0;
 
@@ -229,7 +228,7 @@ MOVE PolyBook::get_move(const Board& board)
             if(tempMove != 0)
             {
                 bookMoves[count++] = tempMove;
-                if(count >= MAXBOOKMOVES)
+                if(count >= MAX_BOOK_MOVES)
                     break;
             }
         }

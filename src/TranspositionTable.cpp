@@ -226,7 +226,7 @@ void TranspositionTable::store(U64 hash, MOVE move, int score, int flag, int dep
             break;
         }
 
-        age = ((tt_date - EXTRACT_DATE(entry->smp_data) & 255) * 256 + 255 - EXTRACT_DEPTH(entry->smp_data));
+        age = ((tt_date - EXTRACT_DATE(entry->smp_data)) & 255) * 256 + 255 - EXTRACT_DEPTH(entry->smp_data);
         if (age > oldest)
         {
             oldest  = age;
