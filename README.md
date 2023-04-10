@@ -47,8 +47,8 @@ It has the following features :
   - Options to change OpeningBook usage, OpeningBook location, Hash size, Threads number
   
 + **Usage**
-I provide two binaries, one for Windows and one for Linux. The Windows one is copmpiled in static, so you don't need extrernal libraries. The Linux one is done with Linux Ubuntu, also in static. I can't say if it will work with another distro.
-By default, the opening book is disabled. It can be re-enabled by using an uci option. Zangdar will search the book in the same directory as the binary. This location can too be specified with an uci option. The book is of polyglot format, and must be named 'book.bin'.
+I provide two binaries, one for Windows and one for Linux. Both are compiled in static, so you don't need extrernal libraries. The Linux one is done with Linux Ubuntu, I can't say if it will work with another distro.
+By default, the opening book is disabled. It can be re-enabled by using an uci option. Zangdar will search the book in the binary's directory. This location can too be specified with an uci option. The book is of polyglot format, and must be named 'book.bin'.
 
 + **Compilation**
 I provide a Makefile that you can use to compile Zangdar. You must have a C++ compiler that use at least C++17. I use personnaly g++. 
