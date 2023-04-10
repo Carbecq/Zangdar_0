@@ -3,9 +3,6 @@ PROF=no
 CXX=g++
 INC=src
 
-# OPTIONS=-DHASH -DDEBUG_EVAL -DDEBUG_LOG -DDEBUG_HASH -DNEW_EVAL -DPVS -DLMR -DPRETTY
-OPTIONS=-DHASH -DTT_XOR  -DLMR -DNEW_EVAL 
-
 ifeq ($(PROF),yes)
     CFPROF=-pg
     LDPROF=-pg
@@ -15,11 +12,11 @@ else
 endif
 
 ifeq ($(DEBUG),yes)
-    CFLAGS=-pipe -std=c++20 -g -O0 -Wshadow -Wall -Wextra -Wcast-qual -march=native -mpopcnt -msse -msse3 $(CFPROF) -I/$(INC) $(OPTIONS)
+    CFLAGS=-pipe -std=c++20 -g -O0 -Wshadow -Wall -Wextra -Wcast-qual -march=native -mpopcnt -msse -msse3 $(CFPROF) -I/$(INC)
     LDFLAGS=$(LDPROF) -lpthread
 	TARGET = Zangdar_dbg
 else
-    CFLAGS=-pipe -std=c++20 -O3 -flto -DNDEBUG -fwhole-program -march=native -mpopcnt -msse -msse3 $(CFPROF) -I/$(INC) $(OPTIONS)
+    CFLAGS=-pipe -std=c++20 -O3 -flto -DNDEBUG -fwhole-program -march=native -mpopcnt -msse -msse3 $(CFPROF) -I/$(INC)
     LDFLAGS= $(LDPROF) -flto -lpthread -static -s
 	TARGET = Zangdar_rel
 endif
