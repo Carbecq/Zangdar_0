@@ -45,3 +45,11 @@ It has the following features :
 + **Communication**
   - UCI
   - Options to change OpeningBook usage, OpeningBook location, Hash size, Threads number
+  
++ **Usage**
+I provide two binaries, one for Windows and one for Linux. The Windows one is copmpiled in static, so you don't need extrernal libraries. The Linux one is done with Linux Ubuntu, also in static. I can't say if it will work with another distro.
+By default, the opening book is disabled. It can be re-enabled by using an uci option. Zangdar will search the book in the same directory as the binary. This location can too be specified with an uci option. The book is of polyglot format, and must be named 'book.bin'.
+
++ **Compilation**
+I provide a Makefile that you can use to compile Zangdar. You must have a C++ compiler that use at least C++17. I use personnaly g++. 
+Since my computer is rather old, I can only use ancient possibilities like popcount. If you have a newer computer, you can certainly use  bmi2, avx2... Look in the makefile and add what you think is needed. I can't unfortunately test them.
