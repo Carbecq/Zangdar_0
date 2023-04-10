@@ -44,4 +44,4 @@ It has the following features :
 
 + **Communication**
   - UCI
-  - Options to change hash size, Threads number
+  - Options to change OpeningBook usage, OpeningBook location, Hash size, Threads number
