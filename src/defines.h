@@ -89,6 +89,11 @@ constexpr U64 ZERO = (U64) 0;
 //=========================================================
 
 extern std::string VERSION;
+#ifdef HOME
+const std::string Home = HOME;
+#else
+    const std::string Home = "./";
+#endif
 
 extern std::vector<std::string> split(const std::string& s, char delimiter);
 extern void printlog(const std::string& message);

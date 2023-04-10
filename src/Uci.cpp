@@ -538,8 +538,7 @@ void Uci::go_bench(int dmax, int tmax)
     // les noms non commentés seront utilisés.
 
     std::string     str_0000 = "0000.txt";
-    std::string     str_home = HOME;
-    std::string     str_path = str_home + "tests/" + str_0000;
+    std::string     str_path = Home + "tests/" + str_0000;
 
     std::string     line;
     std::string     aux;
@@ -584,7 +583,7 @@ void Uci::go_bench(int dmax, int tmax)
 
         std::cout << "test du fichier : [" << str_line << "]" << std::endl;
 
-        str_file = str_home + "tests/" + str_line;
+        str_file = Home + "tests/" + str_line;
         ifs.open(str_file, std::ifstream::in);
         if (!ifs.is_open())
         {

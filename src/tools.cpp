@@ -155,7 +155,7 @@ void inversion()
 void printlog(const std::string& message)
 {
     std::ofstream myfile;
-    std::string str = HOME;
+    std::string str = Home;
     str += "/debug.txt";
       myfile.open(str, std::ios_base::app); // append instead of overwrite
       myfile << message << std::endl;

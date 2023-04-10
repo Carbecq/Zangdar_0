@@ -31,8 +31,7 @@ void test_suite(const std::string& abc, int dmax)
     //  perftsuite_ref  : petite suite permettant de voir s'il y a eu perte de perfo
     //  perftsuite_big  : énorme suite pour contrôler le générateur de coups
 
-    std::string     str_home = HOME;
-    std::string     str_file = str_home + "tests/perftsuite_" + abc + ".epd";
+    std::string     str_file = Home + "tests/perftsuite_" + abc + ".epd";
     std::ifstream file(str_file);
     if (!file.is_open())
     {
@@ -313,8 +312,7 @@ void test_eval(const std::string& fen)
 //----------------------------------------------------
 void test_mirror(void)
 {
-    std::string     str_home = HOME;
-    std::string     str_file = str_home + "tests/mirror.epd";
+    std::string     str_file = Home + "tests/mirror.epd";
 
     std::ifstream file(str_file);
     if (!file.is_open())
