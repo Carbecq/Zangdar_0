@@ -6,6 +6,17 @@
 #include <vector>
 #include <atomic>
 
+#define HASH
+#define TT_XOR
+#define NEW_EVAL
+//#define PRETTY
+//#define PVS
+#define LMR
+
+//#define DEBUG_EVAL
+//#define DEBUG_LOG
+//#define DEBUG_HASH
+
 /*******************************************************
  **	Généralités
  **---------------------------------------------------*/
@@ -88,7 +99,8 @@ constexpr U64 ZERO = (U64) 0;
 
 //=========================================================
 
-extern std::string VERSION;
+const std::string Version = "2.14.06";
+
 #ifdef HOME
 const std::string Home = HOME;
 #else

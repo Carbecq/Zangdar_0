@@ -95,7 +95,7 @@ void Search::show_uci_result(int depth, int best_score, U64 elapsed, MOVE *pv) c
         // time     : the time searched in ms
 
 #ifdef PRETTY
-        std::cout << "score cp " << std::right << std::setw(4) << m_best_score; // the score from the engine's point of view in centipawns
+        std::cout << "score cp " << std::right << std::setw(4) << best_score; // the score from the engine's point of view in centipawns
         std::cout << " depth " << std::setw(2) << depth
                   //             << " seldepth " << std::setw(2) << seldepth
                   << " nodes " << std::setw(l) << all_nodes

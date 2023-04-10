@@ -36,7 +36,7 @@ void Uci::run()
 #endif
 
     // print engine info
-    std::cout << "id name Zangdar " << VERSION << std::endl;
+    std::cout << "id name Zangdar " << Version << std::endl;
     std::cout << "id author Philippe Chevalier" << std::endl;
 
     /*
@@ -79,7 +79,7 @@ void Uci::run()
              */
 
             // print engine info
-            std::cout << "id name Zangdar " << VERSION << std::endl;
+            std::cout << "id name Zangdar " << Version << std::endl;
             std::cout << "id author Philippe Chevalier" << std::endl;
             std::cout << "uciok" << std::endl;
         }
@@ -157,7 +157,7 @@ void Uci::run()
 
         else if (token == "v")
         {
-            std::cout << "Zangdar " << VERSION << std::endl;
+            std::cout << "Zangdar " << Version << std::endl;
         }
         else if (token == "s")
         {
@@ -557,7 +557,7 @@ void Uci::go_bench(int dmax, int tmax)
     std::ifstream   f(str_path);
     if (!f.is_open())
     {
-        std::cout << "[Uci::go_bench] impossible d'ouvrir le fichier " << str_path << std::endl;
+        std::cout << "[Uci::go_bench] impossible d'ouvrir le fichier (" << str_path << ")" << std::endl;
         return;
     }
 
