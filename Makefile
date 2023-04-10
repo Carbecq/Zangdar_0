@@ -23,7 +23,7 @@ ifeq ($(DEBUG),yes)
     LDFLAGS=$(LDPROF)
 else
     CFLAGS=-pipe -std=c++20 -march=native -O3 -flto -DNDEBUG -fwhole-program -DPOPCOUNT -mpopcnt -msse -msse3 $(CFPROF) -I/src $(OPTIONS)  $(HOMEDIR)
-    LDFLAGS= $(LDPROF) -flto  -lpthread 
+    LDFLAGS= $(LDPROF) -flto  -lpthread -static
 endif
 
 
