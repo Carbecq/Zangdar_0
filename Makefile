@@ -3,6 +3,16 @@ PROF=no
 CXX=g++
 INC=src
 
+VERSION = 2.15.03
+
+TARGET     = Zangdar-$(VERSION)
+VERSIONDEF = -DVERSION=\"$(VERSION)\"
+
+
+# needed only for tests
+# just comment it if you want
+#HOMEDEF = -DHOME=\"/media/philippe/Travail/Echecs/Programmation/Zangdar/APP-2/\"
+
 ifeq ($(PROF),yes)
     CFPROF=-pg
     LDPROF=-pg
@@ -12,13 +22,11 @@ else
 endif
 
 ifeq ($(DEBUG),yes)
-    CFLAGS=-pipe -std=c++20 -g -O0 -Wshadow -Wall -Wextra -Wcast-qual -march=native -mpopcnt -msse -msse3 $(CFPROF) -I/$(INC)
+    CFLAGS=-pipe -std=c++20 -g -O0 -Wshadow -Wall -Wextra -Wcast-qual -march=native -mpopcnt -msse -msse3 $(CFPROF) -I/$(INC) $(HOMEDEF) $(VERSIONDEF)
     LDFLAGS=$(LDPROF) -lpthread
-	TARGET = Zangdar_dbg
 else
-    CFLAGS=-pipe -std=c++20 -O3 -flto -DNDEBUG -fwhole-program -march=native -mpopcnt -msse -msse3 $(CFPROF) -I/$(INC)
+    CFLAGS=-pipe -std=c++20 -O3 -flto -DNDEBUG -fwhole-program -march=native -mpopcnt -msse -msse3 $(CFPROF) -I/$(INC) $(HOMEDEF) $(VERSIONDEF)
     LDFLAGS= $(LDPROF) -flto -lpthread -static -s
-	TARGET = Zangdar_rel
 endif
 
 
