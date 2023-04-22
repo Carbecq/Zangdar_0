@@ -23,6 +23,7 @@ It has the following features :
   - Magic Bitboard
 
 + **Search**
+  - Aspiration Window
   - Iterative Deepening
   - Alpha-Beta  , Fail Soft
   - Quiescence
@@ -37,6 +38,7 @@ It has the following features :
   - can use several threads
 
 + **Evaluation**
+  - Static Exchange Evaluation, only for Quiescence
   - Material
   - Piece/Square Table
   - Positional bonus
