@@ -1,0 +1,35 @@
+#uncomment tests to do during the bench
+
+#wacnew.epd
+# Contains the 300 problems from Reinfeld's "Win At Chess" book. 
+# These are mostly easy tactical problems (a few are hard). 
+# It is a revised version with a number of corrections and additions to Reinfeld's original solutions.
+
+#ecmgcp.epd
+# contains a subset of test positions from the Encyclopedia of Chess Middlegames, 
+# selected and corrected by Gian-Carlo Pascutto.
+# https://www.stmintz.com/ccc/index.php?id=189308
+
+#iq4.epd
+# is a set of positions from the book "Test Your Chess IQ". 
+# Jim Monaghan selected and corrected some tests from this book. 
+# I have made some further modifications to the test and this version, which I use, 
+# is in the file "iq4.epd". These tests are run at 10 seconds per position.
+# https://github.com/madnight/gnuchess/blob/master/test/iq6.epd
+
+#WACSilver200.epd
+#	Tiré du livre Win At Chess, de Fred Reinfeld
+# WAC cleaned and revised (200 positions)
+# https://www.talkchess.com/forum3/viewtopic.php?f=2&t=67469
+
+silver.epd
+# NEW Silver Openings Suite
+# The suite cover most all of the major openings and systems, as well as types of positions. 
+# The openings also appear according to their frequency in actual play, therefore the number 
+# of Sicilians, for example, is actually proportionate to the frequency they are played compared 
+# to other openings, etc. This was done via database statistics in Mega Database 2010 with 4.5 million games.
+#
+# Beyond the actual openings, I have also strived to include all the major types of formations, 
+# such as a stonewall, a hedgehog, an isolani, a KIA, etc. 
+# http://www.talkchess.com/forum3/viewtopic.php?t=32532
+
