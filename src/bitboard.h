@@ -15,16 +15,16 @@
 constexpr Bitboard square_to_bit(const int sq) noexcept { return(1ULL << sq);}
 
 //! \brief  récupère le bit à la position donnée
-[[nodiscard]] constexpr bool get(Bitboard b, const int sq)  noexcept { return (b & 1ULL << sq) ; }
+[[nodiscard]] constexpr bool get_bit(Bitboard b, const int sq)  noexcept { return (b & (1ULL << sq)) ; }
 
 //! \brief  met le bit à 1
-constexpr void set(Bitboard& b, const int sq) noexcept      { b |= 1ULL << sq;      }
+constexpr void set_bit(Bitboard& b, const int sq) noexcept      { b |= (1ULL << sq);      }
 
 //! \brief met le bit à 0
-constexpr void unset(Bitboard& b, const int sq) noexcept    { b &= ~1ULL << sq;     }       // pop
+constexpr void unset_bit(Bitboard& b, const int sq) noexcept    { b &= ~(1ULL << sq);     }       // pop
 
 //! \brief change le bit en son opposé
-constexpr void flip(Bitboard& b, const int sq) noexcept     { b ^= 1ULL << sq;    }
+constexpr void flip(Bitboard& b, const int sq) noexcept     { b ^= (1ULL << sq);    }
 
 //! \brief change le bit en son opposé
 constexpr void flip2(Bitboard& b, const int sq1, const int sq2) noexcept { b ^= 1ULL << sq1 ^ 1ULL << sq2;    }

@@ -1,5 +1,6 @@
 #include "Timer.h"
 #include <algorithm>
+#include <cassert>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -82,54 +83,53 @@ void Timer::setup(Color color)
     {
         searchDepth = MAX_PLY;
         timeForThisMove = MAX_TIME;
-    } else if (limits.depth != 0) // profondeur de recherche imposée = depth
+    }
+    else if (limits.depth != 0) // profondeur de recherche imposée = depth
     {
         searchDepth = limits.depth;
         timeForThisMove = MAX_TIME;
-    } else if (limits.movetime != 0) // temps de recherche imposé = move_time
+    }
+    else if (limits.movetime != 0) // temps de recherche imposé = move_time
     {
         searchDepth = MAX_PLY;
         timeForThisMove = limits.movetime;
-    } else if (limits.time[color] != 0) {
+    }
+    else if (limits.time[color] != 0) {
         int time_left = limits.time[color];
         int increment = limits.incr[color];
         int movestogo = limits.movestogo;
 
-        int percent; // How many percent of the time we will use; percent=20 -> 5%, percent=40 -> 2.5% etc. (formula is 100/percent, i.e. 100/40 =2.5)
-
         // partie : 40 coups en 15 minutes              : moves_to_go = 40 ; wtime=btime = 15*60000 ; winc=binc = 0
         // partie en 5 minutes, incrément de 6 secondes : moves_to_go = 0  ; wtime=btime =  5*60000 ; winc=binc = 6 >> sudden death
 
-        // Idée de Mediocre
+        // CCRL blitz :  2min base time + 1sec increment
+
+        assert(time_left >= 0);
+        assert(increment >= 0);
+        assert(movestogo >= 0);
+
+        // code inspiré par Fruit
 
         if (movestogo == 0)
-        {
-            percent = 40;
+            movestogo = 45;
 
-            // Use the percent + increment for the move
-            timeForThisMove = time_left / percent + increment;
+        double time_max = std::max(0.0, time_left - BUFFER);
+        double alloc    = (time_max + increment * static_cast<double>(movestogo - 1))
+                          / static_cast<double>(movestogo);
 
-            // If the increment puts us above the total time left
-            // use the timeleft - 0.5 seconds
-            if (timeForThisMove >= time_left)
-                timeForThisMove = time_left - 500;
-
-            // If 0.5 seconds puts us below 0
-            // use 0.1 seconds
-            if (timeForThisMove < 0)
-                timeForThisMove = 100;
-        }
+        timeForThisMove = std::min(alloc, time_max);
     }
 
-    // print debug info
-    //        std::cout << "timeForThisMove: " << timeForThisMove <<
-    //                     " searchDepth: " << searchDepth << std::endl;
+
+#ifdef DEBUG_TIME
+    debug();
+#endif
 }
 
 //==============================================================================
 //! \brief Check if the time we alloted for picking this move has expired.
 //------------------------------------------------------------------------------
-bool Timer::checkLimits()
+bool Timer::checkLimits() const
 {
     auto fin = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(fin - startTime).count();
@@ -169,4 +169,13 @@ void Timer::show_time()
     auto end = std::chrono::high_resolution_clock::now();
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - startTime).count();
     std::cout << "Time           " << ms / 1000.0 << " s" << std::endl;
+}
+
+//==================================================================
+//! \brief Affiche des informations de debug
+//------------------------------------------------------------------
+void Timer::debug()
+{
+    std::cout << "timeForThisMove: " << timeForThisMove << " searchDepth: " << searchDepth
+              << std::endl;
 }

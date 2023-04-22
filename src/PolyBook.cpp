@@ -2,7 +2,7 @@
 #include "PolyBook.h"
 #include "piece.h"
 #include <string>
-#include "movegen.h"
+#include "MoveGen.h"
 #include "ThreadPool.h"
 
 //=================================================
@@ -92,7 +92,7 @@ U64 PolyBook::calculate_hash(const Board& board)
     if (epsq != NO_SQUARE)
     {
         // Bitboard des attaques de pion ADVERSE
-        Bitboard bb = movegen::pawn_attacks(!us, epsq);
+        Bitboard bb = MoveGen::pawn_attacks(!us, epsq);
 
         if (bb & board.colorPiecesBB[board.side_to_move] & board.typePiecesBB[Pawn])
         {

@@ -5,7 +5,7 @@
 //! \brief  Constructeur
 //-----------------------------------------------------
 MovePicker::MovePicker(int ply, const MOVE tt_move,
-                       const OrderingInfo *m_orderingInfo, const Board *m_board, MoveList *m_moveList)
+                       const OrderingInfo *m_orderingInfo, Board *m_board, MoveList *m_moveList)
 {
     move_list    = m_moveList;
     board        = m_board;
@@ -42,17 +42,28 @@ void MovePicker::scoreMoves(int ply, const MOVE tt_move)
 
         if (tt_move != 0 && move == tt_move)
         {
-             move_list->values[index] = ( 1000000 );
+            move_list->values[index] = ( 1000000 );
         }
         else if (Move::is_capturing(move))
         {
-            PieceType piece    = Move::piece(move);
-            PieceType captured = Move::captured(move);
-            move_list->values[index] = CAPTURE_BONUS + MvvLvaScores[captured][piece];
+//            if (captured > piece)
+//            {
+//                move_list->values[index] = GOOD_CAPTURE + MvvLvaScores[captured][piece];
+//            }
+//            else
+//            {
+//                //int v = board->see(move);
+//                bool b = board->fast_see(move, 0);
+//                if (b)
+//                    move_list->values[index] = GOOD_CAPTURE + MvvLvaScores[captured][piece];
+//                else
+//                    move_list->values[index] = BAD_CAPTURE + MvvLvaScores[captured][piece];
+//            }
+            move_list->values[index] = GOOD_CAPTURE + MvvLvaScores[Move::captured(move)][Move::piece(move)];
         }
         else if (Move::is_promoting(move))
         {
-            move_list->values[index] = PROMOTION_BONUS + PieceValue[Move::piece(move)];
+            move_list->values[index] = PROMOTION_BONUS + Piece_Value[Move::piece(move)];
         }
         else if (move == Killer1)
         {
@@ -60,7 +71,7 @@ void MovePicker::scoreMoves(int ply, const MOVE tt_move)
         }
         else if (move == Killer2)
         {
-             move_list->values[index] = KILLER2_BONUS;
+            move_list->values[index] = KILLER2_BONUS;
         }
         else
         { // Quiet

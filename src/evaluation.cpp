@@ -1,7 +1,7 @@
 #include "evaluation.h"
 #include "Board.h"
 #include "defines.h"
-#include "movegen.h"
+#include "MoveGen.h"
 #include <iostream>
 
 // isolated pawn masks [square]
@@ -193,7 +193,7 @@ constexpr void Board::evaluate_0(int &mg, int &eg, int &gamePhase)
             eg += eg_knight_table[sqpos];
 #ifdef NEW_EVAL
             // mobilité
-            int mobility = Bcount(movegen::knight_moves(sq) & valides);
+            int mobility = Bcount(MoveGen::knight_moves(sq) & valides);
 
             mg += (mobility - knight_unit) * mg_knight_mobility;
             eg += (mobility - knight_unit) * eg_knight_mobility;
@@ -230,7 +230,7 @@ constexpr void Board::evaluate_0(int &mg, int &eg, int &gamePhase)
 
 #ifdef NEW_EVAL
             // mobilité
-            int mobility = Bcount(movegen::bishop_moves(sq, occupiedBB) & valides);
+            int mobility = Bcount(MoveGen::bishop_moves(sq, occupiedBB) & valides);
 
             mg += (mobility - bishop_unit) * mg_bishop_mobility;
             eg += (mobility - bishop_unit) * eg_bishop_mobility;
@@ -262,7 +262,7 @@ constexpr void Board::evaluate_0(int &mg, int &eg, int &gamePhase)
 
 #ifdef NEW_EVAL
             // mobilité
-            int mobility = Bcount(movegen::rook_moves(sq, occupiedBB) & valides);
+            int mobility = Bcount(MoveGen::rook_moves(sq, occupiedBB) & valides);
 
             mg += (mobility - rook_unit) * mg_rook_mobility;
             eg += (mobility - rook_unit) * eg_rook_mobility;
@@ -335,7 +335,7 @@ constexpr void Board::evaluate_0(int &mg, int &eg, int &gamePhase)
 
 #ifdef NEW_EVAL
             // mobilité
-            int mobility = Bcount(movegen::queen_moves(sq, occupiedBB) & valides);
+            int mobility = Bcount(MoveGen::queen_moves(sq, occupiedBB) & valides);
 
             mg += (mobility - queen_unit) * mg_queen_mobility;
             eg += (mobility - queen_unit) * eg_queen_mobility;

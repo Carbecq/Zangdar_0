@@ -2,23 +2,21 @@
 #include "MovePicker.h"
 #include "OrderingInfo.h"
 
-// http://talkchess.com/forum3/viewtopic.php?f=7&t=79828&p=925394&hilit=quiescence+check&sid=e2fc0eb4370c4559e0e1377dc25e6730#p925394
-//extern ThreadData   cData[MAX_THREADS];
-
 //=============================================================
 //! \brief  Recherche jusqu'à obtenir une position calme,
 //!         donc sans prise ou promotion.
 //-------------------------------------------------------------
 template <Color C>
-int Search::quiescence(Board &board, int ply, int alpha, int beta, MOVE* pv)
+int Search::quiescence(Board &board, int ply, int alpha, int beta, MOVE* pv, ThreadData* td)
 {
     assert(beta > alpha);
     MOVE new_pv[MAX_PLY] = {0};
 
-    nodes++;
+    td->nodes++;
 
     //  Time-out
-    if (stopped || check_limits()) {
+    if (stopped || check_limits(td))
+    {
         stopped = true;
         return 0;
     }
@@ -76,8 +74,12 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, MOVE* pv)
     {
         move = movePicker.getNext();
 
+        // Prune des prises inintéressantes
+        if (!in_check && board.fast_see(move, 0) == false)
+            continue;
+
         board.make_move<C>(move);
-        score = -quiescence<~C>(board, ply+1, -beta, -alpha, new_pv);
+        score = -quiescence<~C>(board, ply+1, -beta, -alpha, new_pv, td);
         board.undo_move<C>();
 
         if (stopped)
@@ -111,5 +113,5 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, MOVE* pv)
     return best_score;  // return the best score found so far
 }
 
-template int Search::quiescence<WHITE>(Board &board, int ply, int alpha, int beta, MOVE* pv);
-template int Search::quiescence<BLACK>(Board &board, int ply, int alpha, int beta, MOVE* pv);
+template int Search::quiescence<WHITE>(Board &board, int ply, int alpha, int beta, MOVE* pv, ThreadData* td);
+template int Search::quiescence<BLACK>(Board &board, int ply, int alpha, int beta, MOVE* pv, ThreadData* td);

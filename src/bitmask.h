@@ -63,7 +63,9 @@ constexpr Bitboard Empty        = 0x0000000000000000ULL;
 constexpr Bitboard AllSquares   = 0xffffffffffffffffULL;
 constexpr Bitboard Edge         = 0xff818181818181ffULL;
 
-constexpr Bitboard PROMOTION_RANK[] = {0xff00000000000000ULL, 0x00000000000000ffULL};
+constexpr Bitboard Promotion_Rank[] = {RANK_8_BB, RANK_1_BB};
+constexpr Bitboard Promoting_Rank[] = {RANK_7_BB, RANK_2_BB};
+constexpr Bitboard Starting_Rank[]  = {RANK_2_BB, RANK_7_BB};
 
 constexpr Bitboard NOT_FILE_A_BB = ~FILE_A_BB;
 constexpr Bitboard NOT_FILE_H_BB = ~FILE_H_BB;

@@ -9,12 +9,6 @@ class ThreadPool;
 #include "Timer.h"
 #include "Search.h"
 
-struct Thread {
-    std::thread thread;
-    Search*     search;
-};
-
-
 class ThreadPool
 {
 public:
@@ -26,9 +20,9 @@ public:
     void wait(int start);
     void quit();
 
-    U64  get_nodes();
-    int  get_depths();
-    MOVE get_best();
+    U64  get_all_nodes() const;
+    int  get_all_depths() const;
+    MOVE get_best_move() const { return threads[0].best_move; }
 
     void set_nbrThreads(int n)  { nbr_threads = n;  }
     void set_useBook(bool f)    { use_book = f;     }
@@ -37,7 +31,7 @@ public:
     int  get_nbrThreads()   const { return(nbr_threads);  }
     bool get_useBook()      const { return(use_book);     }
 
-    std::array<Thread, MAX_THREADS> threads;
+    std::array<ThreadData, MAX_THREADS> threads;
 
 private:
     int     nbr_threads;

@@ -19,6 +19,7 @@ extern void test_divide(int dmax);
 extern void test_suite(const std::string& abc, int dmax);
 extern void test_eval(const std::string& abc);
 extern void test_mirror();
+extern void test_see();
 
 Board           uci_board;
 Timer           uci_timer;
@@ -72,7 +73,20 @@ void Uci::run()
 
         //-------------------------------------------- gui -> engine
 
-        if (token == "uci")
+        if (token == "stop")
+        {
+            // stop calculating as soon as possible
+            stop();
+        }
+
+        else if (token == "quit")
+        {
+            // quit the program as soon as possible
+            quit();
+            break;
+        }
+
+        else if (token == "uci")
         {
             /* "uciok" has to appear quickly after the GUI sent "uci",
              * and lengthy init stuff is not allowed.
@@ -123,19 +137,6 @@ void Uci::run()
             parse_options(iss);
         }
 
-        else if (token == "stop")
-        {
-            // stop calculating as soon as possible
-            stop();
-        }
-
-        else if (token == "quit")
-        {
-            // quit the program as soon as possible
-            quit();
-            break;
-        }
-
         //------------------------------------------------------- commandes non uci
 
         else if (token == "h")
@@ -147,6 +148,7 @@ void Uci::run()
             std::cout << "p <r/k/s>                     : test perft <Ref/Kiwipete/Silver2> "   << std::endl;
             std::cout << "bench                         : test de recherche sur un ensemble de positions"       << std::endl;
             std::cout << "eval                          : test evaluation"                                      << std::endl;
+            std::cout << "see                           : test see"                                             << std::endl;
             std::cout << "run <s/k/q/f/w/b>             : test de recherche <Silver2/Kiwipete/Quies/Fine70/WAC2/BUG/REF>"           << std::endl;
             std::cout << "mirror                        : test mirror"                                          << std::endl;
             std::cout << "fen [str]                     : positionne la chaine fen"                             << std::endl;
@@ -188,6 +190,11 @@ void Uci::run()
         else if(token == "eval")
         {
             test_eval(fen);
+        }
+
+        else if(token == "see")
+        {
+            test_see();
         }
 
         else if (token == "run")
@@ -692,9 +699,9 @@ bool Uci::go_tactics(const std::string& line, int dmax, int tmax, U64& total_nod
     auto end = std::chrono::high_resolution_clock::now();
     auto ms  = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     total_time   += ms;
-    total_nodes  += threadPool.get_nodes();
-    total_depths += threadPool.get_depths();
-    MOVE best     = threadPool.get_best();
+    total_nodes  += threadPool.get_all_nodes();
+    total_depths += threadPool.get_all_depths();
+    MOVE best     = threadPool.get_best_move();
 
     std::string str1 = Move::show(best, 1);
     std::string str2 = Move::show(best, 2);

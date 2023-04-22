@@ -1,5 +1,5 @@
 #include "MoveList.h"
-#include "move.h"
+#include "Move.h"
 
 //============================================
 //! \brief  Constructeur

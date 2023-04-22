@@ -33,14 +33,17 @@ public:
 
     void reset();
     void show_time();
+    void debug();
+
 
     void start();
     void setup(Color color);
-    bool checkLimits();
+    bool checkLimits() const;
     bool finishOnThisDepth(U64& elapsed);
     int  getSearchDepth() const { return(searchDepth); }
 
 private:
+    static constexpr double BUFFER = 50.0;
 
     // gives the exact moment this search was started.
     std::chrono::time_point<std::chrono::high_resolution_clock> startTime;

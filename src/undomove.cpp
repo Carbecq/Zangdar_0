@@ -1,5 +1,5 @@
 #include "Board.h"
-#include "square.h"
+#include "Square.h"
 
 //=============================================================
 //! \brief  Enlève un coup
@@ -64,7 +64,7 @@ template <Color C> constexpr void Board::undo_move() noexcept
         flip(typePiecesBB[captured], to);
         cpiece[to]  = captured;
         break;
-    case MoveType::enpassant:
+    case MoveType::EnPassant:
         // Replace the captured pawn
         if (C == Color::WHITE)
         {
@@ -87,7 +87,7 @@ template <Color C> constexpr void Board::undo_move() noexcept
         break;
 
         //==================================================================================
-    case MoveType::ksc:
+    case MoveType::KingCastle:
         // Move the rook
         flip2(colorPiecesBB[C],  ksc_castle_rook_from[C], ksc_castle_rook_to[C]);
         flip2(typePiecesBB[PieceType::Rook], ksc_castle_rook_from[C], ksc_castle_rook_to[C]);
@@ -99,7 +99,7 @@ template <Color C> constexpr void Board::undo_move() noexcept
         break;
 
         //==================================================================================
-    case MoveType::qsc:
+    case MoveType::QueenCastle:
         // Move the rook
         flip2(colorPiecesBB[C], qsc_castle_rook_from[C], qsc_castle_rook_to[C]);
         flip2(typePiecesBB[PieceType::Rook], qsc_castle_rook_from[C], qsc_castle_rook_to[C]);
@@ -111,7 +111,7 @@ template <Color C> constexpr void Board::undo_move() noexcept
         break;
 
         //==================================================================================
-    case MoveType::promo:
+    case MoveType::Promotion:
         // Replace piece with pawn
         flip(typePiecesBB[PieceType::Pawn], to);
         flip(typePiecesBB[promo], to);
@@ -121,7 +121,7 @@ template <Color C> constexpr void Board::undo_move() noexcept
         break;
 
         //==================================================================================
-    case MoveType::promo_capture:
+    case MoveType::PromotionCapture:
         // Replace pawn with piece
         flip(typePiecesBB[PieceType::Pawn], to);
         flip(typePiecesBB[promo], to);

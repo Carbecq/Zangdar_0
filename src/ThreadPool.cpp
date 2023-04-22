@@ -74,11 +74,16 @@ void ThreadPool::start_thinking(const Board& board, const Timer& timer)
 
         for (int i = 0; i < nbr_threads; i++)
         {
+            threads[i].best_move  = 0;
+            threads[i].best_score = INVALID;
+            threads[i].best_depth = 0;
+            threads[i].nodes      = 0;
+
             // copie des arguments
             Board b = board;
             Timer t = timer;
             OrderingInfo o = OrderingInfo();
-            threads[i].search = new Search(b, t, o, log_uci, i);
+            threads[i].search = new Search(b, t, o, log_uci);
         }
 
         // Il faut mettre le lancement des threads dans une boucle séparée
@@ -86,9 +91,9 @@ void ThreadPool::start_thinking(const Board& board, const Timer& timer)
         for (int i = 0; i < nbr_threads; i++)
         {
             if (side == WHITE)
-                threads[i].thread = std::thread(&Search::iterDeep<WHITE>, threads[i].search);
+                threads[i].thread = std::thread(&Search::think<WHITE>, threads[i].search, i);
             else
-                threads[i].thread = std::thread(&Search::iterDeep<BLACK>, threads[i].search);
+                threads[i].thread = std::thread(&Search::think<BLACK>, threads[i].search, i);
         }
     }
 }
@@ -103,11 +108,9 @@ void ThreadPool::main_thread_stopped()
     // envoie à toutes les autres threads
     // le signal d'arrêter
 
-    for (int i = 1; i < nbr_threads; i++) {
-        if (threads[i].search != nullptr) {
+    for (int i = 1; i < nbr_threads; i++)
+        if (threads[i].search != nullptr)
             threads[i].search->stop();
-        }
-    }
 
     // NE PAS détruire les search, on en a besoin
     // pour calculer le nombre de nodes
@@ -132,7 +135,7 @@ void ThreadPool::wait(int start)
 //-------------------------------------------------
 void ThreadPool::stop()
 {
-    if (threads[0].search)
+    if (threads[0].search != nullptr)
         threads[0].search->stop();
     if (threads[0].thread.joinable())
         threads[0].thread.join();
@@ -155,12 +158,12 @@ void ThreadPool::quit()
 //=================================================
 //! \brief  Retourne le nombre total des nodes recherchés
 //-------------------------------------------------
-U64 ThreadPool::get_nodes()
+U64 ThreadPool::get_all_nodes() const
 {
     U64 total = 0;
     for (int i=0; i<nbr_threads; i++)
     {
-        total += threads[i].search->nodes;
+        total += threads[i].nodes;
     }
     return(total);
 }
@@ -168,20 +171,13 @@ U64 ThreadPool::get_nodes()
 //=================================================
 //! \brief  Retourne le nombre total des nodes recherchés
 //-------------------------------------------------
-int ThreadPool::get_depths()
+int ThreadPool::get_all_depths() const
 {
     int total = 0;
     for (int i=0; i<nbr_threads; i++)
     {
-        total += threads[i].search->current_depth;
+        total += threads[i].best_depth;
     }
     return(total);
 }
 
-//=================================================
-//! \brief  Retourne le meilleur coup trouvé
-//-------------------------------------------------
-MOVE ThreadPool::get_best()
-{
-    return threads[0].search->get_best();
-}

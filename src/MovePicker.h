@@ -22,14 +22,13 @@ constexpr int MvvLvaScores[6][6] = {
  * @brief Bonuses applied to specific move types.
  * @{
  */
-constexpr int CAPTURE_BONUS      = 400000;
+constexpr int GOOD_CAPTURE       = 400000;
 constexpr int PROMOTION_BONUS    = 300000;
 constexpr int KILLER1_BONUS      = 200000;
 constexpr int KILLER2_BONUS      = 150000;
 constexpr int COUNTERMOVE_BONUS  =  50000;
 constexpr int QUIET_BONUS        =      0;
-constexpr int BAD_CAPTURE        = -16384;
-constexpr int PROMOTION_SORT[6]  = {0, 0, -50000, 100000, 300000, 0};
+constexpr int BAD_CAPTURE        = -20000;
 
 /**
  * @brief Class for an object that picks moves from a move list in an optimal order.
@@ -44,7 +43,7 @@ class MovePicker
 public:
     MovePicker(int ply, const MOVE tt_move,
                const OrderingInfo *orderingInfo,
-               const Board *board,
+               Board *board,
                MoveList *moveList);
 
     bool hasNext() const;
@@ -54,7 +53,7 @@ public:
 private:
     MoveList*           move_list;
     const OrderingInfo* orderingInfo;
-    const Board*        board;
+    Board*              board;
     size_t              currHead;
 
     void scoreMoves(int ply, const MOVE tt_move);

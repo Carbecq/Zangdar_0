@@ -39,7 +39,7 @@ void binary_print(U32 code)
 //==============================================
 //  fonction pour inverser les tables dans evaluation
 
-#include "square.h"
+#include "Square.h"
 void inversion()
 {
     printf("constexpr int mg_pawn_table[64] = {\n");

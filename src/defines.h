@@ -16,6 +16,7 @@
 //#define DEBUG_EVAL
 //#define DEBUG_LOG
 //#define DEBUG_HASH
+//#define DEBUG_TIME
 
 /*******************************************************
  **	Généralités
@@ -47,33 +48,20 @@ static constexpr int MAX_HASH_SIZE      = 1024;
 static constexpr int MAX_THREADS    = 32;
 
 static constexpr int INVALID        = 99999;
-static constexpr int INF            = 32000; //32767;
-static constexpr int MATE           = 30000; //32000;                        // Vice : INF_BOUND
-static constexpr int MAX_EVAL       = MATE - MAX_PLY;   // 31880    // Vice : ISMATE
+static constexpr int INF            = 32000;
+static constexpr int MATE           = 30000;
+static constexpr int MAX_EVAL       = MATE - MAX_PLY;
+static constexpr int TB_WIN_BOUND   = MAX_EVAL - MAX_PLY;
+static constexpr int INF_BOUND      = INF;
 
 /*
  *   -INF     -MATE    -MAX_EVAL    |    MAX_EVAL     MATE     INF
  *                 xxxx                          xxxxx                      zone de mat
  */
 
-static constexpr int AB_BOUND = MATE;
-static constexpr int INF_BOUND = INF;
 
 static constexpr int LMRLegalMovesLimit = 4;
 static constexpr int LMRDepthLimit = 3;
-
-// Futility margins
-static constexpr int FutilityMargin[9] = {
-    0,
-        100, // depth 1
-        160, // depth 2
-        220, // depth 3
-        280, // depth 4
-        340, // depth 5
-        400, // depth 6
-        460, // depth 7
-        520, // depth 8
-};
 
 //=========================================
 // FEN debug positions
@@ -99,7 +87,7 @@ constexpr U64 ZERO = (U64) 0;
 
 //=========================================================
 
-const std::string Version = "2.14.06";
+const std::string Version = VERSION;
 
 #ifdef HOME
 const std::string Home = HOME;

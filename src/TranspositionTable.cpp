@@ -4,7 +4,7 @@
 #include <bitset>
 #include <iostream>
 #include <cstring>
-#include "move.h"
+#include "Move.h"
 
 
 // Code inspiré de Sungorus

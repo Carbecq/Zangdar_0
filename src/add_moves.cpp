@@ -126,16 +126,16 @@ void Board::push_capture_promotions(MoveList& ml, Bitboard attack, const int dir
 
 /* Append promotions from the same move */
 void Board::push_quiet_promotion(MoveList& ml, const int from, const int to) {
-    add_quiet_promotion(MoveType::promo, ml, from, to, PieceType::Queen);
-    add_quiet_promotion(MoveType::promo, ml, from, to, PieceType::Knight);
-    add_quiet_promotion(MoveType::promo, ml, from, to, PieceType::Rook);
-    add_quiet_promotion(MoveType::promo, ml, from, to, PieceType::Bishop);
+    add_quiet_promotion(MoveType::Promotion, ml, from, to, PieceType::Queen);
+    add_quiet_promotion(MoveType::Promotion, ml, from, to, PieceType::Knight);
+    add_quiet_promotion(MoveType::Promotion, ml, from, to, PieceType::Rook);
+    add_quiet_promotion(MoveType::Promotion, ml, from, to, PieceType::Bishop);
 }
 void Board::push_capture_promotion(MoveList& ml, const int from, const int to) {
-    add_capture_promotion(MoveType::promo_capture, ml, from, to, cpiece[to], PieceType::Queen);
-    add_capture_promotion(MoveType::promo_capture, ml, from, to, cpiece[to], PieceType::Knight);
-    add_capture_promotion(MoveType::promo_capture, ml, from, to, cpiece[to], PieceType::Rook);
-    add_capture_promotion(MoveType::promo_capture, ml, from, to, cpiece[to], PieceType::Bishop);
+    add_capture_promotion(MoveType::PromotionCapture, ml, from, to, cpiece[to], PieceType::Queen);
+    add_capture_promotion(MoveType::PromotionCapture, ml, from, to, cpiece[to], PieceType::Knight);
+    add_capture_promotion(MoveType::PromotionCapture, ml, from, to, cpiece[to], PieceType::Rook);
+    add_capture_promotion(MoveType::PromotionCapture, ml, from, to, cpiece[to], PieceType::Bishop);
 }
 
 //--------------------------------------

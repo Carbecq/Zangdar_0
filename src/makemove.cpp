@@ -1,5 +1,5 @@
 #include "Board.h"
-#include "square.h"
+#include "Square.h"
 #include <iostream>
 
 /* This is the castle_mask array. We can use it to determine
@@ -163,7 +163,7 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
         break;
 
         //====================================================================================
-    case MoveType::enpassant:
+    case MoveType::EnPassant:
         flip2(colorPiecesBB[C],   from, to);
         flip2(typePiecesBB[piece], from, to);
 
@@ -211,7 +211,7 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
         break;
 
         //====================================================================================
-    case MoveType::ksc:
+    case MoveType::KingCastle:
         assert(piece == PieceType::King);
         assert(captured == PieceType::NO_TYPE);
         assert(promo == PieceType::NO_TYPE);
@@ -269,7 +269,7 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
         break;
 
         //====================================================================================
-    case MoveType::qsc:
+    case MoveType::QueenCastle:
         assert(piece == PieceType::King);
         assert(captured == PieceType::NO_TYPE);
         assert(promo == PieceType::NO_TYPE);
@@ -325,7 +325,7 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
         break;
 
         //====================================================================================
-    case MoveType::promo:
+    case MoveType::Promotion:
 
         // suppression du pion
         flip(typePiecesBB[PieceType::Pawn], from);
@@ -357,7 +357,7 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
         break;
 
         //====================================================================================
-    case MoveType::promo_capture:
+    case MoveType::PromotionCapture:
 
         // suppression du pion
         flip(typePiecesBB[PieceType::Pawn], from);

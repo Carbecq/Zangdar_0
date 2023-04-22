@@ -1,6 +1,6 @@
 #include "bitboard.h"
 #include "Board.h"
-#include "square.h"
+#include "Square.h"
 #include <iostream>
 
 template <Color C>

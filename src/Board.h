@@ -5,7 +5,7 @@
 #include "bitboard.h"
 #include "color.h"
 #include "defines.h"
-#include "move.h"
+#include "Move.h"
 #include "piece.h"
 #include "zobrist.h"
 #include <cstring>
@@ -53,28 +53,31 @@ public:
     [[nodiscard]] Board(const std::string &fen) noexcept;
 
     void clear() noexcept;
-
     void parse_position(std::istringstream &is);
 
+    //! \brief  Retourne le camp à jouer
     [[nodiscard]] constexpr Color turn() const noexcept { return side_to_move; }
 
+    //! \brief  Retourne le bitboard des pièces de la couleur indiquée
     template<Color C>
-    [[nodiscard]] constexpr Bitboard occupancy_c() const noexcept
-    {
-        return colorPiecesBB[C];
-    }
-    template<PieceType P>
-    [[nodiscard]] constexpr uint64_t occupancy_p() const noexcept
-    {
-        return typePiecesBB[P];
-    }
-    template<Color C, PieceType P>
-    [[nodiscard]] constexpr Bitboard pieces_cp() const noexcept
-    {
-        return colorPiecesBB[C] & typePiecesBB[P];
-    }
+    [[nodiscard]] constexpr Bitboard occupancy_c() const noexcept { return colorPiecesBB[C]; }
 
-    //Returns the bitboard of all bishops and queens of a given color
+    //! \brief  Retourne le bitboard des pièces du type indiqué
+    template<PieceType P>
+    [[nodiscard]] constexpr uint64_t occupancy_p() const noexcept { return typePiecesBB[P]; }
+
+    //! \brief  Retourne le bitboard des pièces de la couleur indiquée
+    //! et du type indiqué
+    template<Color C, PieceType P>
+    [[nodiscard]] constexpr Bitboard pieces_cp() const noexcept { return colorPiecesBB[C] & typePiecesBB[P]; }
+
+    //! \brief  Retourne le bitboard de toutes les pièces Blanches et Noires
+    [[nodiscard]] constexpr Bitboard occupied() const noexcept { return colorPiecesBB[WHITE] | colorPiecesBB[BLACK]; }
+
+    //! \brief  Retourne le bitboard de toutes les cases vides
+    [[nodiscard]] constexpr Bitboard non_occupied() const noexcept { return ~occupied(); }
+
+    //! \brief  Retourne le bitboard des Fous et des Dames
     template<Color C>
     constexpr Bitboard diagonal_sliders() const
     {
@@ -83,7 +86,7 @@ public:
                    : pieces_cp<BLACK, PieceType::Bishop>() | pieces_cp<BLACK, PieceType::Queen>();
     }
 
-    //Returns the bitboard of all rooks and queens of a given color
+    //! \brief  Retourne le bitboard des Tours et des Dames
     template<Color C>
     constexpr Bitboard orthogonal_sliders() const
     {
@@ -92,45 +95,40 @@ public:
                    : pieces_cp<BLACK, PieceType::Rook>() | pieces_cp<BLACK, PieceType::Queen>();
     }
 
-    [[nodiscard]] constexpr Bitboard occupied() const noexcept
-    {
-        return colorPiecesBB[WHITE] | colorPiecesBB[BLACK];
-    }
-    [[nodiscard]] constexpr Bitboard non_occupied() const noexcept { return ~occupied(); }
+    //! \brief Retourne le bitboard de toutes les pièces du camp "C" attaquant la case "sq"
+    template <Color C>
+    [[nodiscard]] constexpr Bitboard attackers(const int sq) const noexcept;
+
+    //! \brief  Retourne le Bitboard de TOUS les attaquants (Blancs et Noirs) de la case "sq"
+    [[nodiscard]] Bitboard all_attackers(const int sq, const Bitboard occ) const noexcept;
 
     void set_fen(const std::string &fen, bool logTactics) noexcept;
     [[nodiscard]] std::string get_fen() const noexcept;
     void mirror_fen(const std::string &fen, bool logTactics);
 
-    [[nodiscard]] constexpr int get_halfmove_clock() const noexcept { return halfmove_clock; }
-    [[nodiscard]] constexpr int get_game_clock() const noexcept { return game_clock; }
-    [[nodiscard]] constexpr std::size_t get_fullmove_clock() const noexcept
-    {
-        return fullmove_clock;
-    }
+    [[nodiscard]] constexpr int get_halfmove_clock()         const noexcept { return halfmove_clock; }
+    [[nodiscard]] constexpr int get_game_clock()             const noexcept { return game_clock;     }
+    [[nodiscard]] constexpr std::size_t get_fullmove_clock() const noexcept { return fullmove_clock; }
 
+    //! \brief  Retourne la position du roi
     template<Color C>
-    [[nodiscard]] constexpr int king_position() const noexcept
-    {
-        return x_king[C]; /*return first_square( pieces_cp<C, PieceType::King>() ); */
-    }
+    [[nodiscard]] constexpr int king_position() const noexcept { return x_king[C]; }
+
+    //! \brief Retourne le bitboard des cases attaquées
     template<Color C>
     [[nodiscard]] constexpr Bitboard squares_attacked() const noexcept;
-    template<Color C>
-    [[nodiscard]] constexpr bool square_attacked(const int sq) const noexcept
-    {
-        return attackers<C>(sq) > 0;
-    }
-    template<Color C>
-    [[nodiscard]] constexpr Bitboard checkers() const noexcept
-    {
-        return attackers<C>(king_position<C>());
-    }
-    template<Color C>
-    [[nodiscard]] constexpr Bitboard attackers(const int sq) const noexcept;
 
-    /* check if an enpassant move is possible */
-    [[nodiscard]] constexpr bool board_enpassant() { return ep_square != NO_SQUARE; }
+    //! \brief  Détermine si la case sq est attaquée par le camp C
+    template<Color C>
+    [[nodiscard]] constexpr bool square_attacked(const int sq) const noexcept { return attackers<C>(sq) > 0; }
+
+    //! \brief  Retourne le bitboard des pièces attaquant le roi
+    template<Color C>
+    [[nodiscard]] constexpr Bitboard checkers() const noexcept { return attackers<C>(king_position<C>()); }
+
+    //! \brief  Détermine si le roi est en échec
+    template<Color C>
+    [[nodiscard]] constexpr bool is_in_check() const noexcept { return square_attacked<~C>(king_position<C>()); }
 
     template<Color C>
     constexpr void legal_moves(MoveList &ml) noexcept;
@@ -331,11 +329,14 @@ public:
         return khash;
     }
 
+    //! \brief  Retourne la couleur de la pièce située sur la case sq
+    //! SUPPOSE qu'il y a une pièce sur cette case !!
     [[nodiscard]] constexpr Color color_on(const int sq) const noexcept
     {
         return( (colorPiecesBB[WHITE] & square_to_bit(sq)) ? WHITE : BLACK);
     }
 
+    //! \brief  Retourne le type de la pièce située sur la case sq
     [[nodiscard]] constexpr PieceType piece_on(const int sq) const noexcept
     {
         for (int i = 0; i < 6; ++i) {
@@ -369,6 +370,8 @@ public:
                 > 0);
     }
 
+
+
     //================================== partie UCI
     // Fonction UCI
     //    void position(std::istringstream &is);
@@ -382,22 +385,27 @@ public:
     template<Color C>
     constexpr void evaluate_0(int &mg, int &eg, int &gamePhase);
 
+    bool fast_see(const MOVE move, const int threshold) const;
+
+
     void init_allmask();
     void init_bitmasks();
 
     Bitboard colorPiecesBB[2] = {ZERO}; // occupancy board pour chaque couleur
     Bitboard typePiecesBB[6] = {ZERO};  // bitboard pour chaque type de piece
+    std::array<PieceType, 64> cpiece;   // tableau des pièces par case
+    int x_king[2];                      // position des rois
+
+    std::array<Mask, 64> allmask;
 
     //------------------------------------------------------- la position
     Color side_to_move = Color::WHITE; // camp au trait
-    int ep_square = NO_SQUARE;  // case en-passant : si les blancs jouent e2-e4, la case est e3
-    U32 castling = CASTLE_NONE; // droit au roque
+    int   ep_square    = NO_SQUARE;  // case en-passant : si les blancs jouent e2-e4, la case est e3
+    U32   castling     = CASTLE_NONE; // droit au roque
 
-    int halfmove_clock
-        = 0; // nombre de demi-coups depuis la dernière capture ou le dernier mouvement de pion.
-    int game_clock = 0; // nombre de demi-coups de la partie
-    int fullmove_clock
-        = 1; // le nombre de coups complets. Il commence à 1 et est incrémenté de 1 après le coup des noirs.
+    int halfmove_clock = 0; // nombre de demi-coups depuis la dernière capture ou le dernier mouvement de pion.
+    int game_clock     = 0; // nombre de demi-coups de la partie
+    int fullmove_clock = 1; // le nombre de coups complets. Il commence à 1 et est incrémenté de 1 après le coup des noirs.
 
     U64 hash = 0ULL; // nombre unique (?) correspondant à la position (clef Zobrist)
 
@@ -408,11 +416,6 @@ public:
 
     std::array<UndoInfo, MAX_HIST> my_history;
 
-    template<Color C>
-    [[nodiscard]] constexpr bool is_in_check() const noexcept
-    {
-        return square_attacked<~C>(king_position<C>());
-    }
 
     //====================================================================
     //! \brief  Détermine s'il y a eu 50 coups sans prise ni coup de pion
@@ -443,19 +446,17 @@ public:
         return ((is_repetition() || fiftymoves()));
     }
 
-    void set(const int sq, const Color s, const PieceType p) noexcept
+    //=============================================================================
+    //! \brief  Met une pièce à la case indiquée
+    //-----------------------------------------------------------------------------
+    void set_piece(const int sq, const Color s, const PieceType p) noexcept
     {
         colorPiecesBB[s] |= square_to_bit(sq);
         typePiecesBB[p] |= square_to_bit(sq);
         cpiece[sq] = p;
     }
 
-    std::array<PieceType, 64> cpiece;
-    int x_king[2]; // position des rois
 
-    Bitboard pinnedBB;
-    Bitboard checkersBB;
-    std::array<Mask, 64> allmask;
 
     /*
      * The Halfmove Clock inside an chess position object takes care of enforcing the fifty-move rule.
