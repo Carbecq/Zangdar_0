@@ -29,14 +29,14 @@ Timer::Timer(bool infinite,
     limits.time[BLACK] = btime;
     limits.incr[WHITE] = winc;
     limits.incr[BLACK] = binc;
-    limits.movestogo = movestogo;
-    limits.depth = depth;
-    limits.nodes = nodes;
-    limits.movetime = movetime;
-    limits.infinite = infinite;
+    limits.movestogo   = movestogo;
+    limits.depth       = depth;
+    limits.nodes       = nodes;
+    limits.movetime    = movetime;
+    limits.infinite    = infinite;
 
-    timeForThisMove = 0;
-    searchDepth = 0;
+    timeForThisMove    = 0;
+    searchDepth        = 0;
 }
 
 void Timer::reset()
@@ -45,14 +45,14 @@ void Timer::reset()
     limits.time[BLACK] = 0;
     limits.incr[WHITE] = 0;
     limits.incr[BLACK] = 0;
-    limits.movestogo = 0;
-    limits.depth = 0;
-    limits.nodes = 0;
-    limits.movetime = 0;
-    limits.infinite = false;
+    limits.movestogo   = 0;
+    limits.depth       = 0;
+    limits.nodes       = 0;
+    limits.movetime    = 0;
+    limits.infinite    = false;
 
-    timeForThisMove = 0;
-    searchDepth = 0;
+    timeForThisMove    = 0;
+    searchDepth        = 0;
 }
 
 //===========================================================
@@ -76,25 +76,26 @@ void Timer::setup(Color color)
     //        std::cout << "move_time   " << limits.movetime << std::endl;
     //        std::cout << "infinite    " << limits.infinite << std::endl;
 
-    searchDepth = MAX_PLY;
+    searchDepth     = MAX_PLY;
     timeForThisMove = MAX_TIME;
 
     if (limits.infinite) // recherche infinie (temps et profondeur)
     {
-        searchDepth = MAX_PLY;
+        searchDepth     = MAX_PLY;
         timeForThisMove = MAX_TIME;
     }
     else if (limits.depth != 0) // profondeur de recherche imposée = depth
     {
-        searchDepth = limits.depth;
+        searchDepth     = limits.depth;
         timeForThisMove = MAX_TIME;
     }
     else if (limits.movetime != 0) // temps de recherche imposé = move_time
     {
-        searchDepth = MAX_PLY;
+        searchDepth     = MAX_PLY;
         timeForThisMove = limits.movetime;
     }
-    else if (limits.time[color] != 0) {
+    else if (limits.time[color] != 0)
+    {
         int time_left = limits.time[color];
         int increment = limits.incr[color];
         int movestogo = limits.movestogo;
@@ -138,6 +139,16 @@ bool Timer::checkLimits() const
         return true;
 
     return false;
+}
+
+//==============================================================================
+//! \brief  Retourne le temps écoulé depuis le début de la recherche.
+//------------------------------------------------------------------------------
+int Timer::elapsedTime()
+{
+    auto fin = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(fin - startTime).count();
+    return elapsed;
 }
 
 //===========================================================

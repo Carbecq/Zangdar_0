@@ -13,9 +13,10 @@
 #include "PolyBook.h"
 #include "TranspositionTable.h"
 #include "ThreadPool.h"
+#include "pyrrhic/tbprobe.h"
 
 extern void test_perft(const std::string& abc, int dmax);
-extern void test_divide(int dmax);
+extern void test_divide(const std::string& abc, int dmax);
 extern void test_suite(const std::string& abc, int dmax);
 extern void test_eval(const std::string& abc);
 extern void test_mirror();
@@ -23,7 +24,6 @@ extern void test_see();
 
 Board           uci_board;
 Timer           uci_timer;
-
 
 //======================================
 //! \brief  Boucle principale UCI
@@ -37,7 +37,7 @@ void Uci::run()
 #endif
 
     // print engine info
-    std::cout << "id name Zangdar " << Version << std::endl;
+    std::cout << "id name Zangdar " << VERSION << std::endl;
     std::cout << "id author Philippe Chevalier" << std::endl;
 
     /*
@@ -55,6 +55,7 @@ void Uci::run()
     std::cout << "option name Threads type spin default 1 min 1 max " << MAX_THREADS << std::endl;
     std::cout << "option name OwnBook type check default false" << std::endl;
     std::cout << "option name BookPath type string default " << "./" << std::endl;
+    std::cout << "option name SyzygyPath type string default " << "<empty>" << std::endl;
 
     std::cout << "uciok" << std::endl;
 
@@ -93,7 +94,7 @@ void Uci::run()
              */
 
             // print engine info
-            std::cout << "id name Zangdar " << Version << std::endl;
+            std::cout << "id name Zangdar " << VERSION << std::endl;
             std::cout << "id author Philippe Chevalier" << std::endl;
             std::cout << "uciok" << std::endl;
         }
@@ -124,7 +125,10 @@ void Uci::run()
             // a different game.
             uci_board.set_fen(START_FEN, false);
             Transtable.clear();
-            //TODO clear history
+            Transtable.clear_pawn_table();
+            Transtable.clear_eval_table();
+
+            //TODO clear history, killers
         }
 
         else if (token == "go")
@@ -144,7 +148,7 @@ void Uci::run()
             std::cout << "q(uit) "      << std::endl;
             std::cout << "v(ersion) "   << std::endl;
             std::cout << "s <ref/big>                   : test suite_perft "                    << std::endl;
-            std::cout << "d                             : test divide "                         << std::endl;
+            std::cout << "divide                        : test divide "                         << std::endl;
             std::cout << "p <r/k/s>                     : test perft <Ref/Kiwipete/Silver2> "   << std::endl;
             std::cout << "bench                         : test de recherche sur un ensemble de positions"       << std::endl;
             std::cout << "eval                          : test evaluation"                                      << std::endl;
@@ -154,12 +158,13 @@ void Uci::run()
             std::cout << "fen [str]                     : positionne la chaine fen"                             << std::endl;
             std::cout << "dmax [p]                      : positionne la profondeur de recherche"                << std::endl;
             std::cout << "tmax [ms]                     : positionne le temps de recherche en millisecondes"    << std::endl;
+            std::cout << "display                       : affiche la position"                                  << std::endl;
             std::cout << "systeme                       : informe sur les minimums systeme"                     << std::endl;
         }
 
         else if (token == "v")
         {
-            std::cout << "Zangdar " << Version << std::endl;
+            std::cout << "Zangdar " << VERSION << std::endl;
         }
         else if (token == "s")
         {
@@ -169,9 +174,9 @@ void Uci::run()
             test_suite(str, dmax);
         }
 
-        else if (token == "d")
+        else if (token == "divide")
         {
-            test_divide(dmax);
+            test_divide(fen, dmax);
         }
 
         else if (token == "p")
@@ -199,6 +204,9 @@ void Uci::run()
 
         else if (token == "run")
         {
+            Transtable.clear();
+            Transtable.clear_pawn_table();
+            Transtable.clear_eval_table();
             std::string str;
             iss >> str;
 
@@ -210,9 +218,15 @@ void Uci::run()
             go_bench(dmax, tmax);
         }
 
-        else if(token == "fen")
+        else if (token == "fen")
         {
             std::getline(iss, fen);
+            uci_board.set_fen(fen, false);
+            std::cout << uci_board.display() << std::endl;;
+        }
+        else if (token == "display")
+        {
+            std::cout << uci_board.display() << std::endl;;
         }
         else if (token == "dmax")
         {
@@ -345,10 +359,10 @@ void Uci::parse_go(std::istringstream& iss)
 
     uci_timer = Timer(infinite, wtime, btime, winc, binc, movestogo, depth, nodes, movetime);
 
-    // La recherche est lancée dans une ou plusieurs threads séparées
-    // Le programme principal contine dans la thread courante
-    // de façon à continuer à recevoir les commandes
-    // de UCI. Pax exemple : stop, quit.
+// La recherche est lancée dans une ou plusieurs threads séparées
+// Le programme principal contine dans la thread courante
+// de façon à continuer à recevoir les commandes
+// de UCI. Pax exemple : stop, quit.
 #ifdef DEBUG_LOG
     char message[100];
     sprintf(message, "UCI::start_thinking ");
@@ -426,6 +440,8 @@ setoption name <id> [value <x>]
                 printlog(message);
 #endif
                 Transtable.clear();
+                Transtable.clear_pawn_table();
+                Transtable.clear_eval_table();
             }
         }
 
@@ -492,6 +508,26 @@ setoption name <id> [value <x>]
 #endif
             Book.setPath(path);
         }
+
+        else if (option_name == "SyzygyPath")
+        {
+            iss >> value;      // "value"
+
+            std::string path;
+            iss >> path;
+
+            if (path != "<empty>" && !path.empty())
+            {
+#ifdef DEBUG_LOG
+                sprintf(message, "Uci::parse_options : SyzygyPath (%s) ", path.c_str());
+                printlog(message);
+#endif
+                tb_init(path.data());
+
+                // only use TB if loading was successful
+                UseSyzygy = (TB_LARGEST > 0);
+            }
+        }
     }
     else
     {
@@ -502,29 +538,34 @@ setoption name <id> [value <x>]
 //=================================================================
 //! \brief  Lancement d'une recherche sur une position
 //-----------------------------------------------------------------
-void Uci::go_run(const std::string& abc, const std::string& bug, int dmax, int tmax)
+void Uci::go_run(const std::string& abc, const std::string& fen, int dmax, int tmax)
 {
-    std::string fen = START_FEN;
+    std::string auxi;
+    std::string bug = "7r/5p2/3k4/P4p2/1n3N1P/1PRbPB2/5KP1/8 b - - 1 45 ";
 
     //    Transtable.clear();
     // utiliser setoption name Clear Hash
     // permet de controler l'utilisation de la table
 
     if (abc == "s")
-        fen = SILVER2;
+        auxi = SILVER2;
     else if (abc == "k")
-        fen = KIWIPETE;
+        auxi = KIWIPETE;
     else if (abc == "q")
-        fen = QUIESC;
+        auxi = QUIESC;
     else if (abc == "f")
-        fen = FINE_70;
+        auxi = FINE_70;
     else if (abc == "w")
-        fen = WAC_2;
+        auxi = WAC_2;
+    else if (abc == "r")
+        auxi = START_FEN;
     else if (abc == "b")
-        fen = bug;
+        auxi = bug;
+    else
+        auxi = fen;
 
     //    Options.log_uci = true;
-    uci_board.set_fen(fen, false);
+    uci_board.set_fen(auxi, false);
     std::cout << uci_board.display() << std::endl;
     std::string strgo;
 
@@ -555,11 +596,13 @@ void Uci::go_bench(int dmax, int tmax)
     //    std::string     aa;
     //    char            tag = ';';
     int             numero      = 0;
-    int             total_ok    = 0;
+    int             total_bm    = 0;
+    int             total_am    = 0;
     int             total_ko    = 0;
     U64             total_nodes = 0;
     U64             total_time  = 0;
     int             total_depths = 0;
+    bool            found_am;
 
     std::ifstream   f(str_path);
     if (!f.is_open())
@@ -600,11 +643,13 @@ void Uci::go_bench(int dmax, int tmax)
 
         //---------------------------------------------------
         numero      = 0;
-        total_ok    = 0;
+        total_bm    = 0;
+        total_am    = 0;
         total_ko    = 0;
         total_nodes = 0;
         total_time  = 0;
         total_depths = 0;
+        found_am     = false;
 
         // Boucle sur l'ensemble des positions de test
         while (std::getline(ifs, line))
@@ -619,7 +664,7 @@ void Uci::go_bench(int dmax, int tmax)
                 continue;
 
             numero++;
-            printf("test %d : ", numero);
+            printf("test %3d : ", numero);
 
             // Extraction des éléments de la ligne
             //  0= position
@@ -639,8 +684,10 @@ void Uci::go_bench(int dmax, int tmax)
             //            }
 
             // Exécution du test
-            if (go_tactics(line, dmax, tmax, total_nodes, total_time, total_depths) == true)
-                total_ok++;
+            if (go_tactics(line, dmax, tmax, total_nodes, total_time, total_depths, found_am) == true)
+                total_bm++;
+            else if (found_am == true)
+                total_am++;
             else
                 total_ko++;
 
@@ -653,17 +700,18 @@ void Uci::go_bench(int dmax, int tmax)
         std::cout << "===============================================" << std::endl;
         std::cout << " Fichier " << str_line << std::endl;
         std::cout << "===============================================" << std::endl;
-        std::cout << "total ok    = " << total_ok << std::endl;
+        std::cout << "total bm    = " << total_bm << std::endl;
+        std::cout << "total am    = " << total_am << std::endl;
         std::cout << "total ko    = " << total_ko << std::endl;
         std::cout << "total nodes = " << total_nodes << std::endl;
         std::cout << "time        = " << std::fixed << std::setprecision(3) << static_cast<double>(total_time)/1000.0 << " s" << std::endl;
         std::cout << "nps         = " << std::fixed << std::setprecision(3) << static_cast<double>(total_nodes)/1000.0/static_cast<double>(total_time) << " Mnode/s" << std::endl;
-        std::cout << "depth moy   = " << std::fixed << std::setprecision(3) << static_cast<double>(total_depths)/static_cast<double>(total_ok+total_ko) << std::endl;
+        std::cout << "depth moy   = " << std::fixed << std::setprecision(3) << static_cast<double>(total_depths)/static_cast<double>(total_bm+total_am+total_ko) << std::endl;
         std::cout << "nbr threads = " << threadPool.get_nbrThreads() << std::endl;
         if (dmax !=0)
-        std::cout << "depth max   = " << dmax << std::endl;
+            std::cout << "depth max   = " << dmax << std::endl;
         if (tmax !=0)
-        std::cout << "time max    = " << tmax << std::endl;
+            std::cout << "time max    = " << tmax << std::endl;
         std::cout << "===============================================" << std::endl;
 
     } // boucle fichiers epd
@@ -677,9 +725,12 @@ void Uci::go_bench(int dmax, int tmax)
 //! \brief Réalisaion d'un test tactique
 //! et comparaison avec le résultat
 //-------------------------------------------------------------
-bool Uci::go_tactics(const std::string& line, int dmax, int tmax, U64& total_nodes, U64& total_time, int& total_depths)
+bool Uci::go_tactics(const std::string& line, int dmax, int tmax, U64& total_nodes, U64& total_time, int& total_depths, bool& found_am)
 {
     Transtable.clear();
+    Transtable.clear_pawn_table();
+    Transtable.clear_eval_table();
+
     uci_board.set_fen(line, true);
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -707,7 +758,8 @@ bool Uci::go_tactics(const std::string& line, int dmax, int tmax, U64& total_nod
     std::string str2 = Move::show(best, 2);
     std::string str3 = Move::show(best, 3);
 
-    bool found = false;
+    bool found_bm = false;
+    found_am = false;
     std::string abc;
 
     // NOTE : il est possible que dans certains cas, il faut donner
@@ -723,16 +775,40 @@ bool Uci::go_tactics(const std::string& line, int dmax, int tmax, U64& total_nod
 
         if(str1==e || str2 == e || str3 == e) // attention au format de sortie de Move::show()
         {
-            found = true;
+            found_bm = true;
             abc   = e;
             break;
         }
     }
 
-    if (found)
+    if (found_bm == false)
+    {
+        for (auto & e : uci_board.avoid_moves)
+        {
+            // On vire tous les caractères inutiles à la comparaison
+            for (char c : std::string("+#!?"))
+            {
+                e.erase(std::remove(e.begin(), e.end(), c), e.end());
+            }
+
+            if(str1==e || str2 == e || str3 == e) // attention au format de sortie de Move::show()
+            {
+                found_am = true;
+                abc      = e;
+                break;
+            }
+        }
+    }
+
+    if (found_bm)
     {
         std::cout << "ok : " << abc << std::endl;
         return(true);
+    }
+    else if (found_am)
+    {
+        std::cout << "ERREUR : " << abc << std::endl;
+        return(false);
     }
     else
     {
@@ -742,7 +818,7 @@ bool Uci::go_tactics(const std::string& line, int dmax, int tmax, U64& total_nod
         for (auto & e : uci_board.best_moves)
             std::cout << e << " ";
         std::cout << "; coup trouvé = " << str1 << std::endl;
-        return(false);
+            return(false);
     }
 }
 

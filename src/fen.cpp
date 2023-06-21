@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <sstream>
 #include <string>
+#include <iomanip>
 #include "Board.h"
 
 //    rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
@@ -52,6 +53,8 @@ void Board::set_fen(const std::string &fen, bool logTactics) noexcept
 
     // Reset the board
     clear();
+    avoid_moves.clear();
+    best_moves.clear();
 
     //-------------------------------------
     std::stringstream ss{fen};
@@ -196,8 +199,7 @@ void Board::set_fen(const std::string &fen, bool logTactics) noexcept
 
             if (op == "bm") // Best Move
             {
-                best_moves.clear();
-                while(true)
+                 while(true)
                 {
                     ss >> auxi;
                     p = auxi.find(';');             // indique la fin du champ "bm"
@@ -215,7 +217,6 @@ void Board::set_fen(const std::string &fen, bool logTactics) noexcept
             }
             else if (op == "am")    // Avoid Move
             {
-                avoid_moves.clear();
                 while(true)
                 {
                     ss >> auxi;
@@ -234,18 +235,22 @@ void Board::set_fen(const std::string &fen, bool logTactics) noexcept
             }
             else if (op == "id")    // identifiant
             {
+                std::string total;
                 while(true)
                 {
                     ss >> auxi;
                     p = auxi.find(';');             // indique la fin du champ "am"
                     if (p == std::string::npos)     // pas trouvé
                     {
+                        total += auxi;
+                        total += " ";
                     }
                     else
                     {
-                        std::string ident = auxi.substr(0, p);
+                        total += auxi.substr(0, p);;
+                        std::string ident = total; //.substr(0, p);
                         if (logTactics)
-                            std::cout << ident << " : ";
+                            std::cout << std::setw(30) << ident << " : ";
                         break;
                     }
                 }
@@ -277,11 +282,11 @@ void Board::set_fen(const std::string &fen, bool logTactics) noexcept
         game_clock = 2*fullmove_clock;
     }
 
-    //-----------------------------------------
+//-----------------------------------------
 
-    // Calculate hash
+// Calculate hash
 #ifdef HASH
-    hash = calculate_hash();
+    calculate_hash(hash, pawn_hash);
 #endif
 
     //   std::cout << display() << std::endl;
@@ -311,6 +316,8 @@ void Board::mirror_fen(const std::string& fen, bool logTactics)
 
     // Reset the board
     clear();
+    avoid_moves.clear();
+    best_moves.clear();
 
     //-------------------------------------
 
@@ -513,11 +520,11 @@ void Board::mirror_fen(const std::string& fen, bool logTactics)
         game_clock = 2*fullmove_clock;
     }
 
-    //-----------------------------------------
+//-----------------------------------------
 
-    // Calculate hash
+// Calculate hash
 #ifdef HASH
-    hash = calculate_hash();
+    calculate_hash(hash, pawn_hash);
 #endif
 
     //   std::cout << display() << std::endl;
@@ -526,8 +533,6 @@ void Board::mirror_fen(const std::string& fen, bool logTactics)
         assert(valid<WHITE>());
     else
         assert(valid<BLACK>());
-
-
 }
 
 //============================================================

@@ -6,13 +6,11 @@
 //---------------------------------------------------
 Board::Board() noexcept
 {
-    init_allmask();
     init_bitmasks();
 }
 
 Board::Board(const std::string &fen) noexcept
 {
-    init_allmask();
     init_bitmasks();
     set_fen(fen, false);
 }
@@ -26,6 +24,7 @@ std::string Board::display() const noexcept
 
     int i = 56;
     U64 hh = get_hash();
+    U64 ph = get_pawn_hash();
     ss << std::endl;
 
     ss << "  8 " ;
@@ -87,6 +86,7 @@ std::string Board::display() const noexcept
     }
     ss <<     "Turn     : " << (turn() == Color::WHITE ? 'w' : 'b') << '\n';
     ss <<     "Hash     : " << hh << "\n";
+    ss <<     "PawnHash : " << ph << "\n";
     ss <<     "Fen      : " << get_fen();
     return(ss.str());
 }
@@ -101,6 +101,7 @@ void Board::clear() noexcept
     typePiecesBB[3] = 0ULL;
     typePiecesBB[4] = 0ULL;
     typePiecesBB[5] = 0ULL;
+    typePiecesBB[6] = 0ULL;
 
     cpiece.fill(PieceType::NO_TYPE);
 
@@ -108,13 +109,13 @@ void Board::clear() noexcept
     fullmove_clock  = 1;
     game_clock      = 0;
     hash            = 0;
+    pawn_hash       = 0;
 
     ep_square    = NO_SQUARE;
-    hash         = 0x0;
-    castling     = 0;
+    castling     = CASTLE_NONE;
     side_to_move = Color::WHITE;
 
-    my_history.fill(UndoInfo{0, 0, 0, 0, 0});
+    my_history.fill(UndoInfo{0, 0, 0, 0, 0, 0});
 }
 
 template bool Board::is_in_check<WHITE>()     const noexcept;

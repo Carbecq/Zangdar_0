@@ -25,10 +25,10 @@ template <Color C>
 }
 
 
-//! \brief Retourne le bitboard des cases attaquèes
+//! \brief Retourne le Bitboard des cases attaquées
 template <Color C>
 [[nodiscard]] constexpr Bitboard Board::squares_attacked() const noexcept {
-    Bitboard mask = ZERO;
+    Bitboard mask = 0ULL;
 
     // Pawns
     if (C == Color::WHITE) {
@@ -75,11 +75,22 @@ template <Color C>
     return mask;
 }
 
+//! \brief  Retourne le Bitboard des attaques de tous les pions de la couleur C
+template <Color C>
+[[nodiscard]] constexpr Bitboard Board::all_pawn_attacks(const Bitboard pawns)
+{
+    if (C == WHITE)
+        return ShiftBB<NORTH_WEST>(pawns) | ShiftBB<NORTH_EAST>(pawns);
+    else
+        return ShiftBB<SOUTH_WEST>(pawns) | ShiftBB<SOUTH_EAST>(pawns);
+}
+
 // Explicit instantiations.
 template Bitboard Board::squares_attacked<WHITE>() const noexcept ;
 template Bitboard Board::squares_attacked<BLACK>() const noexcept ;
 
-// Explicit instantiations.
-
 template Bitboard Board::attackers<WHITE>(const int sq) const noexcept;
 template Bitboard Board::attackers<BLACK>(const int sq) const noexcept;
+
+template Bitboard Board::all_pawn_attacks<WHITE>(const Bitboard pawns);
+template Bitboard Board::all_pawn_attacks<BLACK>(const Bitboard pawns);

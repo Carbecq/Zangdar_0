@@ -8,13 +8,20 @@ class Search;
 #include "defines.h"
 #include "Timer.h"
 
+struct PVariation {
+    MOVE line[MAX_PLY+1];
+    int  length;
+};
+
 struct ThreadData {
     std::thread thread;
+    int         index;
     Search*     search;
     MOVE        best_move;
     int         best_score;
     int         best_depth;
     U64         nodes;
+
 }__attribute__((aligned(64)));
 
 #include "Board.h"
@@ -46,7 +53,6 @@ public:
 
     // Fonction UCI : Search_Uci.cpp
     void stop();
-    void test_value(const std::string &fen);
 
 private:
     bool    stopped;
@@ -57,18 +63,20 @@ private:
 
     std::array<int, MAX_PLY> statEval;
 
+    template <Color C> int alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bool do_NULL, PVariation& pv, ThreadData* td);
+    template <Color C> int quiescence(Board &board, int ply, int alpha, int beta, ThreadData* td);
+
+    void show_uci_result(const ThreadData *td, U64 elapsed, PVariation &pv) const;
+    void show_uci_best(const ThreadData *td) const;
+    void show_uci_current(MOVE move, int currmove, int depth) const;
+    bool check_limits(const ThreadData *td) const;
+    void update_pv(PVariation &pv, const PVariation &new_pv, const MOVE move) const;
+
+    static constexpr int ASPIRATION_WINDOW = 23;     // aspiration windows
     static constexpr int CONTEMPT    = 0;           // TODO : option ?
     static constexpr int NULL_MOVE_R = 2;    // réduction de la profondeur de recherche
+    static constexpr int CurrmoveTimerMS = 2500;
 
-    template <Color C> int alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bool do_NULL, MOVE* pv, ThreadData* td);
-    template <Color C> int quiescence(Board &board, int ply, int alpha, int beta, MOVE* pv, ThreadData* td);
-
-    void show_uci_result(const ThreadData *td, U64 elapsed, MOVE *pv) const;
-    void show_uci_best(const ThreadData *td) const;
-    bool check_limits(const ThreadData *td) const;
-    void update_pv(MOVE *dst, MOVE *src, MOVE move) const;
-
-    static constexpr int  WINDOW = 23;     // aspiration windows
 
 };
 

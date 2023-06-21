@@ -6,7 +6,7 @@
 class OrderingInfo;
 
 #include "defines.h"
-#include "piece.h"
+#include "types.h"
 
 //!
 //! \brief Classe permettant d'ordonner les coups
@@ -42,7 +42,7 @@ private:
     /**
      * @brief Table of beta-cutoff history values indexed by [color][piece][to_square]
      */
-    int history[2][6][64];
+    int history[2][7][64];
 
 
 };

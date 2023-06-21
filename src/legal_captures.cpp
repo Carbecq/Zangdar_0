@@ -1,6 +1,7 @@
 #include "Board.h"
 #include "bitboard.h"
 #include "MoveGen.h"
+#include "Square.h"
 
 constexpr int PUSH[] = {8, -8};
 
@@ -14,7 +15,7 @@ constexpr int PUSH[] = {8, -8};
 template <Color C>
 constexpr void Board::legal_captures(MoveList& ml) noexcept
 {
-    const Color O = ~C;
+    constexpr Color O = ~C;
     const int   K = x_king[C];
 
     const Bitboard occupiedBB = occupied();     // toutes les pièces (Blanches + Noires)
@@ -108,14 +109,14 @@ constexpr void Board::legal_captures(MoveList& ml) noexcept
                 if (Square::is_on_seventh_rank<C>(from))
                     push_capture_promotion(ml, from, to);
                 else
-                    add_capture_move(MoveType::Capture, ml, from, to, PieceType::Pawn, cpiece[to]);
+                    add_capture_move(ml, from, to, PieceType::Pawn, cpiece[to], Move::FLAG_NONE);
             }
             else if (d == abs(pawn_right) && (square_to_bit(to = from + pawn_right) & MoveGen::pawn_attacks(C, from) & enemyBB))
             {
                 if (Square::is_on_seventh_rank<C>(from))
                     push_capture_promotion(ml, from, to);
                 else
-                    add_capture_move(MoveType::Capture, ml, from, to, PieceType::Pawn, cpiece[to]);
+                    add_capture_move(ml, from, to, PieceType::Pawn, cpiece[to], Move::FLAG_NONE);
             }
         }
 
@@ -188,9 +189,10 @@ constexpr void Board::legal_captures(MoveList& ml) noexcept
             pieceBB = occupiedBB ^ square_to_bit(from) ^ square_to_bit(ep) ^ square_to_bit(to);
 
             if ( !(MoveGen::bishop_moves(K, pieceBB) & bq & colorPiecesBB[O]) &&
-                 !(MoveGen::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
+                !(MoveGen::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
             {
-                add_capture_move(MoveType::EnPassant, ml, from, to, PieceType::Pawn, PieceType::Pawn);
+                add_capture_move(ml, from, to, PieceType::Pawn, PieceType::Pawn, Move::FLAG_ENPASSANT);
+                //                add_quiet_move(ml, from, to, PieceType::Pawn, Move::FLAG_ENPASSANT);
             }
         }
 
@@ -200,9 +202,10 @@ constexpr void Board::legal_captures(MoveList& ml) noexcept
             pieceBB = occupiedBB ^ square_to_bit(from) ^ square_to_bit(ep) ^ square_to_bit(to);
 
             if ( !(MoveGen::bishop_moves(K, pieceBB) & bq & colorPiecesBB[O]) &&
-                 !(MoveGen::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
+                !(MoveGen::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
             {
-                add_capture_move(MoveType::EnPassant, ml, from, to, PieceType::Pawn, PieceType::Pawn);
+                add_capture_move(ml, from, to, PieceType::Pawn, PieceType::Pawn, Move::FLAG_ENPASSANT);
+                //                add_quiet_move(ml, from, to, PieceType::Pawn, Move::FLAG_ENPASSANT);
             }
         }
     }
@@ -262,7 +265,7 @@ constexpr void Board::legal_captures(MoveList& ml) noexcept
     {
         to = next_square(mask);
         if (!square_attacked<O>(to))
-            add_capture_move(MoveType::Capture, ml, K, to, PieceType::King, cpiece[to]);
+            add_capture_move(ml, K, to, PieceType::King, cpiece[to], Move::FLAG_NONE);
     }
 
     // remet le roi dans l'échiquier

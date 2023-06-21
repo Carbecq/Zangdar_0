@@ -2,6 +2,7 @@
 #include "Board.h"
 #include "Search.h"
 #include "PolyBook.h"
+#include "TranspositionTable.h"
 
 extern PolyBook Book;
 
@@ -50,7 +51,15 @@ void ThreadPool::start_thinking(const Board& board, const Timer& timer)
 #endif
 
     MOVE best = 0;
+
+    // Probe Opening Book
     if(use_book == true && (best = Book.get_move(board)) != 0)
+    {
+        std::cout << "bestmove " << Move::name(best) << std::endl;
+    }
+
+    // Probe Syzygy TableBases
+    else if (UseSyzygy && board.probe_root(best) == true)
     {
         std::cout << "bestmove " << Move::name(best) << std::endl;
     }
@@ -74,8 +83,9 @@ void ThreadPool::start_thinking(const Board& board, const Timer& timer)
 
         for (int i = 0; i < nbr_threads; i++)
         {
+            threads[i].index      = i;
             threads[i].best_move  = 0;
-            threads[i].best_score = INVALID;
+            threads[i].best_score = -INFINITE;
             threads[i].best_depth = 0;
             threads[i].nodes      = 0;
 
@@ -85,6 +95,9 @@ void ThreadPool::start_thinking(const Board& board, const Timer& timer)
             OrderingInfo o = OrderingInfo();
             threads[i].search = new Search(b, t, o, log_uci);
         }
+
+        // Préparation des tables de transposition
+        Transtable.update_age();
 
         // Il faut mettre le lancement des threads dans une boucle séparée
         // car il faut être sur que la Search soit bien créée

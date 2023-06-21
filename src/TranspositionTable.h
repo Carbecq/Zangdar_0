@@ -10,13 +10,14 @@ enum HASH_CODE { HASH_NONE=0, HASH_ALPHA=1, HASH_BETA=2, HASH_EXACT=4 };
 class TranspositionTable;
 
 #include "defines.h"
+#include "types.h"
 
 /* Stockage SMP :
  --------------------------------
   U64   hash;    // 64 bits
-  MOVE  move;   // 32 bits  (packing = 24 bits)  >> contient "hash_code"
-  I16   score;  // 16 bits  0-65535
-  U08   depth;  //  8 bits
+  MOVE  move;    // 32 bits  (packing = 24 bits)  >> contient "hash_code"
+  I16   score;   // 16 bits  0-65535
+  U08   depth;   //  8 bits
   U08   date;    //  8 bits
 
   flag move score depth date
@@ -32,46 +33,65 @@ struct HashEntry {
     U64 smp_data;
 #else
     U64   hash;    // 64 bits
-    MOVE  move;   // 32 bits  (packing = 24 bits)  >> contient "hash_code"
-    I16   score;  // 16 bits
-    U08   depth;  //  8 bits
+    MOVE  move;    // 32 bits  (packing = 24 bits)  >> contient "hash_code"
+    I16   score;   // 16 bits
+    U08   depth;   //  8 bits
     U08   date;    //  8 bits
 #endif
 };
 
-[[nodiscard]] constexpr U64 FOLD_DATA(
-        const int    _date,
-        const int    _depth,
-        const int    _score,
-        const int    _move,
-        const int    _flag)
-{
-    return( static_cast<U64>(_date)                     |
-            static_cast<U64>(_depth)            << 8    |
-            static_cast<U64>(_score+INF_BOUND)  << 16   |
-            static_cast<U64>(_move)             << 32   |
-            static_cast<U64>(_flag)             << 56);
-}
+//----------------------------------------------------------
+// Code provenant de Ethereal
 
-[[nodiscard]] constexpr int EXTRACT_DATE(U64 data) noexcept {
-    return (data & 0xFF);
-}
+static constexpr int EVAL_CACHE_KEY_SIZE = 16;
+static constexpr int EVAL_CACHE_MASK     = 0xFFFF;
+static constexpr int EVAL_CACHE_SIZE     = 1 << EVAL_CACHE_KEY_SIZE;
 
-[[nodiscard]] constexpr int EXTRACT_DEPTH(U64 data) noexcept {
-    return ((data>>8) & 0xFF);
-}
+static constexpr int PAWN_CACHE_SIZE     = 64 * 1024;
 
-[[nodiscard]] constexpr int EXTRACT_SCORE(U64 data) noexcept {
-    return (((data>>16) & 0xFFFF) - INF_BOUND);
-}
+using  EvalCacheEntry = U64;
+struct PawnCacheEntry {
+    U64      pawn_hash;
+    Bitboard passed;
+    Score    score;
+};
 
-[[nodiscard]] constexpr int EXTRACT_MOVE(U64 data) noexcept {
-    return ((data>>32) & 0xFFFFFF);
-}
+//----------------------------------------------------------
 
-[[nodiscard]] constexpr int EXTRACT_FLAG(U64 data) noexcept {
-    return ((data>>56) & 0x7);
-}
+
+//[[nodiscard]] constexpr U64 FOLD_DATA(
+//        const int    _date,
+//        const int    _depth,
+//        const int    _score,
+//        const int    _move,
+//        const int    _flag)
+//{
+//    return( static_cast<U64>(_date)                     |
+//            static_cast<U64>(_depth)            << 8    |
+//            static_cast<U64>(_score+INF_BOUND)  << 16   |
+//            static_cast<U64>(_move)             << 32   |
+//            static_cast<U64>(_flag)             << 56);
+//}
+
+//[[nodiscard]] constexpr int EXTRACT_DATE(U64 data) noexcept {
+//    return (data & 0xFF);
+//}
+
+//[[nodiscard]] constexpr int EXTRACT_DEPTH(U64 data) noexcept {
+//    return ((data>>8) & 0xFF);
+//}
+
+//[[nodiscard]] constexpr int EXTRACT_SCORE(U64 data) noexcept {
+//    return (((data>>16) & 0xFFFF) - INF_BOUND);
+//}
+
+//[[nodiscard]] constexpr int EXTRACT_MOVE(U64 data) noexcept {
+//    return ((data>>32) & 0xFFFFFF);
+//}
+
+//[[nodiscard]] constexpr int EXTRACT_FLAG(U64 data) noexcept {
+//    return ((data>>56) & 0x7);
+//}
 
 
 
@@ -101,11 +121,19 @@ private:
     int         tt_buckets;
     HashEntry*  tt_entries = nullptr;
 
-    int nbr_store[4];
-    int nbr_probe[4];
+//    int nbr_store[4];
+//    int nbr_probe[4];
 
-    int hit;
-    int cut;
+//    int hit;
+//    int cut;
+
+//    U64 pcachehit;
+//    U64 pcachenohit;
+//    U64 pcachestore;
+
+    //-------------------------------------------
+    EvalCacheEntry EvalCacheTable[EVAL_CACHE_SIZE];
+    PawnCacheEntry PawnCacheTable[PAWN_CACHE_SIZE];
 
 public:
     TranspositionTable();
@@ -118,11 +146,37 @@ public:
     void clear(void);
     void update_age(void);
     void store(U64 hash, MOVE move, int score, int flag, int depth, int ply);
-    bool probe(U64 hash, MOVE &code, int& score, int &flag, int alpha, int beta, int depth, int ply);
+    bool probe(U64 hash, int ply, MOVE &code, int& score, int &flag, int &depth);
     void stats();
 
+    //! \brief Store terminal scores as distance from the current position to mate/TB
+    int ScoreToTT (const int score, const int ply)
+    {
+        return score >=  TBWIN_IN_X ? score + ply
+               : score <= -TBWIN_IN_X ? score - ply
+                                        : score;
+    }
+
+    //! \brief Add the distance from root to terminal scores get the total distance to mate/TB
+    int ScoreFromTT (const int score, const int ply)
+    {
+        return score >=  TBWIN_IN_X ? score - ply
+               : score <= -TBWIN_IN_X ? score + ply
+                                        : score;
+    }
+
+    //------------------------------------------------
+    void store_evaluation(U64 hash, int eval);
+    bool probe_evaluation(U64 hash, Color color, int& eval) const;
+    void clear_eval_table(void);
+
+    bool probe_pawn_cache(U64 hash, Score &score);
+    void store_pawn_cache(U64 hash, Score score);
+    void clear_pawn_table(void);
 };
 
 extern TranspositionTable Transtable;
+
+
 
 #endif // TRANSPOSITIONTABLE_H

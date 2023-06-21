@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <locale>
 #include <thread>
+#include <cmath>
 
 extern ThreadPool threadPool;
 
@@ -22,6 +23,7 @@ Search::Search(const Board &m_board, const Timer &m_timer, OrderingInfo &m_info,
     sprintf(message, "Search constructeur");
     printlog(message);
 #endif
+
 }
 
 //=============================================
@@ -36,7 +38,7 @@ Search::~Search() {}
 //! \param[in] best_score   meilleur score
 //! \param[in] elapsed      temps passé pour la recherche, en millisecondes
 //---------------------------------------------------------
-void Search::show_uci_result(const ThreadData* td, U64 elapsed, MOVE *pv) const
+void Search::show_uci_result(const ThreadData* td, U64 elapsed, PVariation& pv) const
 {
     elapsed++; // évite une division par 0
     // commande envoyée à UCI
@@ -61,13 +63,15 @@ void Search::show_uci_result(const ThreadData* td, U64 elapsed, MOVE *pv) const
      *           mate in y moves, not plies.
      *           If the engine is getting mated use negative values for y.
      */
-
-    if (td->best_score >= MAX_EVAL) {
+    
+    if (td->best_score >= MATE_IN_X) {
         std::cout << "mate " << std::setw(2) << (MATE - td->best_score) / 2 + 1;
         std::cout << "      ";
-    } else if (td->best_score <= -MAX_EVAL) {
+        printf(" plus ply=%d  ", MATE-td->best_score);
+    } else if (td->best_score <= -MATE_IN_X) {
         std::cout << "mate " << std::setw(2) << (-MATE - td->best_score) / 2;
         std::cout << "      ";
+        printf(" moins ply=%d  ", -MATE-td->best_score);
     } else {
         //collect info about nodes from all Threads
         U64 all_nodes = threadPool.get_all_nodes();
@@ -97,8 +101,8 @@ void Search::show_uci_result(const ThreadData* td, U64 elapsed, MOVE *pv) const
     }
 
     std::cout << " pv";
-    for (MOVE *p = pv; *p != 0; p++)
-        std::cout << " " << Move::name(*p);
+    for (int i=0; i<pv.length; i++)
+        std::cout << " " << Move::name(pv.line[i]);
 
     std::cout << std::endl;
 }
@@ -115,15 +119,27 @@ void Search::show_uci_best(const ThreadData* td) const
 }
 
 //=========================================================
+//! \brief  Affichage UCI du coup en cours d'étude
+//!
+//---------------------------------------------------------
+void Search::show_uci_current(MOVE move, int currmove, int depth) const
+{
+    std::cout << "info depth "      << depth
+              << " currmove "       << Move::show(move, 4)
+              << " currmovenumber " << currmove
+              << std::endl;
+}
+
+//=========================================================
 //! \brief  Mise à jour de la Principal variation
 //!
 //! \param[in]  name   coup en notation UCI
 //---------------------------------------------------------
-void Search::update_pv(MOVE *dst, MOVE *src, MOVE move) const
+void Search::update_pv(PVariation& pv, const PVariation& new_pv, const MOVE move) const
 {
-    *dst++ = move;
-    while ((*dst++ = *src++))
-        ;
+    pv.length  = 1 + new_pv.length;
+    pv.line[0] = move;
+    memcpy(pv.line + 1, new_pv.line, sizeof(MOVE) * new_pv.length);
 }
 
 //=========================================================
@@ -136,7 +152,8 @@ void Search::update_pv(MOVE *dst, MOVE *src, MOVE move) const
 bool Search::check_limits(const ThreadData* td) const
 {
     // Every 4096 nodes, check if our time has expired.
-    if ((td->nodes & 4095) == 0)
+    // On ne teste pas si nodes=0
+    if ((td->nodes & 4095) == 4095)
         return my_timer.checkLimits();
     else
         return false;

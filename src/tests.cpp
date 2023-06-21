@@ -10,9 +10,12 @@
 #include "Board.h"
 #include <unistd.h>
 #include <stdio.h>
+#include "TranspositionTable.h"
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
+
+void sort_moves(MoveList& ml);
 
 //====================================================
 //! \brief Réalisation d'une série de tests "perft"
@@ -240,16 +243,15 @@ void test_perft(const std::string& str, int depth)
     else
         printf("resultat        : >>>>>>>>>>>>>>>>>>>>>>>>>>>> KO : bon = %lu \n", nbr[depth]);
 
-    printf(    "evaluation      : %d \n", CB.evaluate());
+    printf(    "evaluation      : %d \n", CB.evaluate<true>());
 }
 
 //========================================================
 //! \brief  lancement d'un test perft sur une position
 //! \param  depth   profondeur max de recherche
 //---------------------------------------------------------
-void test_divide(int depth)
+void test_divide(const std::string &fen, int depth)
 {
-    std::string fen = START_FEN;
     U64 nbr[10] = {1, 20, 400, 8902,  197281,   4865609,   119060324,   3195901860,  84998978956,   2439530234167  };
 
     Board board(fen);
@@ -274,20 +276,15 @@ void test_divide(int depth)
     if (total == nbr[depth])
         printf("resultat        : OK \n");
     else
-        printf("resultat        : >>>>>>>>>>>>>>>>>>>>>>>>>>>> KO : bon = %lu \n", nbr[depth]);
+        printf("resultat        : >>>>>>>>>>>>>>>>>>>>>>>>>>>> KO : total = %lu ; bon = %lu \n", total, nbr[depth]);
 
 }
 
-
-#include "Search.h"
-
 //========================================================
 //! \brief  Affiche tous les coups possibles ainsi que leur valeur
-//! \param  depth   profondeur max de recherche
 //---------------------------------------------------------
 void test_eval(const std::string& fen)
 {
-
     //    std::string promobug = "8/p1R5/6p1/3k2Np/7P/5K2/1bp4r/8 b - - 14 60 ";
 
     //    fen = "7k/3q4/8/1r1R2b1/8/3p4/8/7K w - - 0 1";
@@ -298,15 +295,16 @@ void test_eval(const std::string& fen)
     //fen = "6k1/5ppp/8/1pP5/PP6/4P3/8/6K1 w - - 3 1 ";
     //fen = "6k1/4Pppp/8/1pP5/PP6/4P3/4P3/6K1 w - - 3 1 ";
 
+    // 4k3/8/8/8/8/8/8/4K2R w K - 0 1 ;D1 15 ;D2 66 ;D3 1197 ;D4 7059 ;D5 133987 ;D6 764643
+//    std::string fen2 = "7k/8/1Pp5/4P3/8/3p4/P7/7K b - - 0 1 ";
+    std::string bug = "5bk1/5p2/2Qpr1pp/1P2p3/8/3r1N1P/5PP1/5K2 w - - 0 42";
+
     Board b;
-    Timer t;
-    OrderingInfo info;
-    Search search(b, t, info, false);
-    search.test_value(fen);
+    b.test_value(fen);
 }
 
 //====================================================
-//! \brief Réalisation d'un test controlant si
+//! \brief Réalisation d'un test contrôlant si
 //! l'évaluation est symétrique.
 //!
 //----------------------------------------------------
@@ -357,25 +355,35 @@ bool Board::test_mirror(const std::string& line)
 {
     int ev1 = 0; int ev2 = 0;
     bool r = true;
-    //std::cout << "********************************************************" << std::endl;
+//    std::cout << "********************************************************" << std::endl;
+//    std::cout << line << std::endl;
+
     set_fen(line, true);
 
-    //    std::cout << display() << std::endl;
+//    std::cout << display() << std::endl;
 
-    ev1 = evaluate();
-    //    std::cout << "side = " << positions->side_to_move << " : ev1 = " << ev1 << std::endl;
+    ev1 = evaluate<true>();
+//    std::cout << "side = " << side_to_move << " : ev1 = " << ev1 << std::endl;
 
     mirror_fen(line, true);
-    //    std::cout << display() << std::endl;
-    ev2 = evaluate();
-    //    std::cout << "side = " << positions->side_to_move << " : ev2 = " << ev2 <<  std::endl;
+
+    // Note : pour faire le test, il faut soit désactiver le cache
+    //        soit faire "Transtable.clear();" pour chaque évaluation
+
+//    std::cout << display() << std::endl;
+    ev2 = evaluate<true>();
+//    std::cout << "side = " << side_to_move << " : ev2 = " << ev2 <<  std::endl;
 
     if(ev1 != ev2)
     {
-        //        std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> " << std::endl;//        display_ascii();
+        std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> " << std::endl;
+        set_fen(line, true);
+        std::cout << display() << std::endl;
+        mirror_fen(line, true);
+        std::cout << display() << std::endl;
+        std::cout << "ev1 = " << ev1 << " ; ev2 = " << ev2 << std::endl;
         r = false;
     }
-
 
     return(r);
 }
@@ -384,44 +392,79 @@ bool Board::test_mirror(const std::string& line)
 //! \brief  Affiche tous les coups possibles ainsi que leur valeur
 //!         L'affichage est fait dans l'ordre défini par la valeur du coup
 //------------------------------------------------------
-void Search::test_value(const std::string& fen )
+void Board::test_value(const std::string& fen )
 {
-    Board b;
-    //nodes=0;
-    stop();
-    //   Transtable.clear();
-    b.set_fen(fen, false);
-
-    std::cout << b.display() << std::endl;
+    set_fen(fen, false);
+    std::cout << display() << std::endl;
 
     MoveList ml;
     U32 move;
 
-    printf("side = %s : evaluation = %d \n", side_name[b.side_to_move].c_str(), b.evaluate());
-
+    printf("side = %s : evaluation = %d \n", side_name[side_to_move].c_str(), evaluate<true>());
 
     // generate successor moves
-    b.legal_moves<WHITE>(ml);
+    legal_moves<WHITE>(ml);
+    sort_moves(ml);
 
     // look over all moves
-    for (int index=0; index<ml.count; index++)
+//    for (int index=0; index<ml.count; index++)
+//    {
+//        move = ml.moves[index];
+
+//        // execute current move
+//        make_move<WHITE>(move);
+
+//        bool doCheck    = is_in_check<BLACK>();
+
+//        printf("side = %s : %s : value=%d score=%d ; ", side_name[side_to_move].c_str(),
+//               Move::name(move).c_str(), ml.values[index], evaluate());
+//        if (doCheck)
+//            printf("blanc fait échec \n");
+//        else
+//            printf("blanc ne fait pas échec \n");
+
+//        // retract current move
+//        undo_move<WHITE>();
+//    }
+}
+
+#include "MovePicker.h"
+
+//======================================================
+//! \brief  Ordonne les captures en fonction de MvvLva
+//------------------------------------------------------
+void sort_moves(MoveList& ml)
+{
+    for (int i=0; i<ml.count; i++)
     {
-        move = ml.moves[index];
-
-        // execute current move
-        b.make_move<WHITE>(move);
-
-        bool doCheck    = b.is_in_check<BLACK>();
-
-        printf("side = %s : %s : value=%d score=%d \n", side_name[b.side_to_move].c_str(),
-               Move::name(move).c_str(), ml.values[index], b.evaluate());
-        if (doCheck)
-            printf("blanc fait echec \n");
+        MOVE m = ml.moves[i];
+        if (Move::is_capturing(m))
+        {
+            PieceType piece = Move::piece(m);
+            PieceType capt  = Move::captured(m);
+            ml.values[i] = MvvLvaScores[capt][piece];
+        }
         else
-            printf("blanc ne fait pas echec \n");
+        {
+            ml.values[i] = 0;
+        }
+    }
+    for (int i=0; i<ml.count-1; i++)
+    {
+        for (int j=i; j<ml.count; j++)
+        {
+            if (ml.values[j] > ml.values[i] )
+            {
+                int v = ml.values[i];
+                MOVE m = ml.moves[i];
 
-        // retract current move
-        b.undo_move<WHITE>();
+                ml.values[i] = ml.values[j];
+                ml.values[j] = v;
+
+                ml.moves[i] = ml.moves[j];
+                ml.moves[j] = m;
+            }
+        }
     }
 }
 

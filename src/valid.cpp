@@ -9,15 +9,23 @@ template <Color C>
 //    std::cout << "valid debut" << std::endl;
 
 #ifdef HASH
-    if (hash != calculate_hash()) {
-        std::cout << "erreur hash" << std::endl;
+    U64 hash_1, hash_2;
+    calculate_hash(hash_1, hash_2);
+    if (hash != hash_1)
+    {
+        std::cout << "erreur hash 1" << std::endl;
+        return false;
+    }
+    if (pawn_hash != hash_2)
+    {
+        std::cout << "erreur hash 2 : " << pawn_hash << "  " << hash_2 << std::endl;
         return false;
     }
 #endif
     if (ep() != NO_SQUARE) {
         if (turn() == Color::WHITE && Square::rank(ep()) != 5) {
             std::cout << "erreur 1" << std::endl;
-           return false;
+            return false;
         }
         if (turn() == Color::BLACK && Square::rank(ep()) != 2) {
             std::cout << "erreur 2" << std::endl;
@@ -36,24 +44,24 @@ template <Color C>
     }
 
     if (colorPiecesBB[0] & colorPiecesBB[1]) {
-        PrintBB(colorPiecesBB[0]);
-        PrintBB(colorPiecesBB[1]);
+        PrintBB(colorPiecesBB[0], "erreur 5");
+        PrintBB(colorPiecesBB[1], "erreur 5");
         std::cout << "erreur 5" << std::endl;
         return false;
     }
 
     if (occupancy_p<PieceType::Pawn>() & (RANK_1_BB | RANK_8_BB)) {
         printf("%s \n", display().c_str());
-        PrintBB(occupancy_p<PieceType::Pawn>());
-        PrintBB(RANK_1_BB);
-        PrintBB(RANK_8_BB);
+        PrintBB(occupancy_p<PieceType::Pawn>(), "erreur 5");
+        PrintBB(RANK_1_BB, "erreur 5");
+        PrintBB(RANK_8_BB, "erreur 5");
 
         std::cout << "erreur 6" << std::endl;
         return false;
     }
 
-    for (int i = 0; i < 5; ++i) {
-        for (int j = i + 1; j < 6; ++j) {
+    for (int i = Pawn; i <= King; ++i) {
+        for (int j = i + 1; j <= King; ++j) {
             if (typePiecesBB[i] & typePiecesBB[j]) {
                 std::cout << "erreur 7 " << std::endl;
                 return false;
@@ -61,22 +69,22 @@ template <Color C>
         }
     }
 
-    if ((colorPiecesBB[0] | colorPiecesBB[1]) != (typePiecesBB[0] | typePiecesBB[1] | typePiecesBB[2] | typePiecesBB[3] | typePiecesBB[4] | typePiecesBB[5])) {
-        printf("%s \n\n", display().c_str());
- PrintBB(colorPiecesBB[0]);
- PrintBB(colorPiecesBB[1]);
- PrintBB(typePiecesBB[0]);
- PrintBB(typePiecesBB[1]);
- PrintBB(typePiecesBB[2]);
- PrintBB(typePiecesBB[3]);
- PrintBB(typePiecesBB[4]);
- PrintBB(typePiecesBB[5]);
+    //    if ((colorPiecesBB[1] | colorPiecesBB[1]) != (typePiecesBB[0] | typePiecesBB[1] | typePiecesBB[2] | typePiecesBB[3] | typePiecesBB[4] | typePiecesBB[5])) {
+    //        printf("%s \n\n", display().c_str());
+    // PrintBB(colorPiecesBB[0]);
+    // PrintBB(colorPiecesBB[1]);
+    // PrintBB(typePiecesBB[0]);
+    // PrintBB(typePiecesBB[1]);
+    // PrintBB(typePiecesBB[2]);
+    // PrintBB(typePiecesBB[3]);
+    // PrintBB(typePiecesBB[4]);
+    // PrintBB(typePiecesBB[5]);
 
-        std::cout << "erreur 8" << std::endl;
-        return false;
-    }
+    //        std::cout << "erreur 8" << std::endl;
+    //        return false;
+    //    }
 
-     if (x_king[WHITE] != king_position<WHITE>())
+    if (x_king[WHITE] != king_position<WHITE>())
     {
         std::cout << "erreur roi blanc" << std::endl;
         return(false);
@@ -97,46 +105,46 @@ template <Color C>
         }
     }
 
-//    std::cout << "11 " << std::endl;
+    //    std::cout << "11 " << std::endl;
 
-//    if (white_can_castle_k()) {
-//        if (!(Bitboard(king_position(Color::WHITE)) & bitboards::Rank1)) {
-//            return false;
-//        }
-//        if (piece_on(castle_rooks_from_[0]) != PieceType::Rook) {
-//            return false;
-//        }
-//    }
-  //  std::cout << "12 " << std::endl;
+    //    if (white_can_castle_k()) {
+    //        if (!(Bitboard(king_position(Color::WHITE)) & bitboards::Rank1)) {
+    //            return false;
+    //        }
+    //        if (piece_on(castle_rooks_from_[0]) != PieceType::Rook) {
+    //            return false;
+    //        }
+    //    }
+    //  std::cout << "12 " << std::endl;
 
-//    if (white_can_castle_q()) {
-//        if (!(Bitboard(king_position(Color::WHITE)) & bitboards::Rank1)) {
-//            return false;
-//        }
-//        if (piece_on(castle_rooks_from_[1]) != PieceType::Rook) {
-//            return false;
-//        }
-//    }
- //   std::cout << "13 " << std::endl;
+    //    if (white_can_castle_q()) {
+    //        if (!(Bitboard(king_position(Color::WHITE)) & bitboards::Rank1)) {
+    //            return false;
+    //        }
+    //        if (piece_on(castle_rooks_from_[1]) != PieceType::Rook) {
+    //            return false;
+    //        }
+    //    }
+    //   std::cout << "13 " << std::endl;
 
-//    if (black_can_castle_k()) {
-//        if (!(Bitboard(king_position(Color::BLACK)) & bitboards::Rank8)) {
-//            return false;
-//        }
-//        if (piece_on(castle_rooks_from_[2]) != PieceType::Rook) {
-//            return false;
-//        }
-//    }
- //   std::cout << "14 " << std::endl;
+    //    if (black_can_castle_k()) {
+    //        if (!(Bitboard(king_position(Color::BLACK)) & bitboards::Rank8)) {
+    //            return false;
+    //        }
+    //        if (piece_on(castle_rooks_from_[2]) != PieceType::Rook) {
+    //            return false;
+    //        }
+    //    }
+    //   std::cout << "14 " << std::endl;
 
-//    if (black_can_castle_q()) {
-//        if (!(Bitboard(king_position(Color::BLACK)) & bitboards::Rank8)) {
-//            return false;
-//        }
-//        if (piece_on(castle_rooks_from_[3]) != PieceType::Rook) {
-//            return false;
-//        }
-//    }
+    //    if (black_can_castle_q()) {
+    //        if (!(Bitboard(king_position(Color::BLACK)) & bitboards::Rank8)) {
+    //            return false;
+    //        }
+    //        if (piece_on(castle_rooks_from_[3]) != PieceType::Rook) {
+    //            return false;
+    //        }
+    //    }
 
     //   std::cout << "valid fin " << std::endl;
 

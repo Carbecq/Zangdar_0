@@ -185,14 +185,14 @@ namespace M42 {
   inline uint64_t diag_attacks(int sq, uint64_t occ)
   {
     occ &= DiagonalMask64[sq];
-    return ((occ - SquareMask64[sq]) ^ byteswap(byteswap(occ) - SquareMask64[sq ^ 56]))
+    return ((occ - SquareMask64[sq]) ^ byte_swap(byte_swap(occ) - SquareMask64[sq ^ 56]))
       & DiagonalMask64[sq];
   }
 
   inline uint64_t adiag_attacks(int sq, uint64_t occ)
   {
     occ &= AntiDiagonalMask64[sq];
-    return ((occ - SquareMask64[sq]) ^ byteswap(byteswap(occ) - SquareMask64[sq ^ 56]))
+    return ((occ - SquareMask64[sq]) ^ byte_swap(byte_swap(occ) - SquareMask64[sq ^ 56]))
       & AntiDiagonalMask64[sq];
   }
 

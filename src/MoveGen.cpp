@@ -23,8 +23,9 @@ void calculate_squares_between()
             const auto adx = dx > 0 ? dx : -dx;
             const auto ady = dy > 0 ? dy : -dy;
 
-            if (dx == 0 || dy == 0 || adx == ady) {
-                Bitboard mask = ZERO;
+            if (dx == 0 || dy == 0 || adx == ady)
+            {
+                Bitboard mask = 0ULL;
                 while (sq1 != sq2) {
                     if (dx > 0) {
                         sq1 = Square::east(sq1);

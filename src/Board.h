@@ -3,10 +3,9 @@
 
 #include "MoveList.h"
 #include "bitboard.h"
-#include "color.h"
+#include "types.h"
 #include "defines.h"
 #include "Move.h"
-#include "piece.h"
 #include "zobrist.h"
 #include <cstring>
 #include <ostream>
@@ -23,7 +22,8 @@ struct Mask
 // celle-ci sera nécessaire pour effectuer un unmake_move
 struct UndoInfo
 {
-    U64 hash = 0; // nombre unique (?) correspondant à la position
+    U64 hash      = 0;      // nombre unique (?) correspondant à la position
+    U64 pawn_hash = 0;
     U32 move;
     int ep_square;          // case en-passant : si les blancs jouent e2-e4, la case est e3
     int halfmove_clock = 0; // nombre de coups depuis une capture, ou un movement de pion
@@ -102,6 +102,9 @@ public:
     //! \brief  Retourne le Bitboard de TOUS les attaquants (Blancs et Noirs) de la case "sq"
     [[nodiscard]] Bitboard all_attackers(const int sq, const Bitboard occ) const noexcept;
 
+    template <Color C>
+    [[nodiscard]] constexpr Bitboard all_pawn_attacks(const Bitboard pawns);
+
     void set_fen(const std::string &fen, bool logTactics) noexcept;
     [[nodiscard]] std::string get_fen() const noexcept;
     void mirror_fen(const std::string &fen, bool logTactics);
@@ -142,18 +145,16 @@ public:
 
     void verify_MvvLva();
 
-    void add_quiet_move(
-        MoveType type, MoveList &ml, int from, int dest, PieceType piece) const noexcept;
-    void add_capture_move(MoveType type,
+    void add_quiet_move(MoveList &ml, int from, int dest, PieceType piece, U32 flags) const noexcept;
+    void add_capture_move(
                           MoveList &ml,
                           int from,
                           int dest,
                           PieceType piece,
-                          PieceType captured) const noexcept;
-    void add_quiet_promotion(
-        MoveType type, MoveList &ml, int from, int dest, PieceType promo) const noexcept;
-    void add_capture_promotion(MoveType type,
-                               MoveList &ml,
+                          PieceType captured,
+                          U32 flags) const noexcept;
+    void add_quiet_promotion(MoveList &ml, int from, int dest, PieceType promo) const noexcept;
+    void add_capture_promotion(MoveList &ml,
                                int from,
                                int dest,
                                PieceType captured,
@@ -167,16 +168,13 @@ public:
     void push_capture_promotions(MoveList &ml, Bitboard attack, const int dir);
     void push_quiet_promotion(MoveList &ml, const int from, const int to);
     void push_capture_promotion(MoveList &ml, const int from, const int to);
-    void push_pawn_quiet_moves(MoveType type, MoveList &ml, Bitboard attack, const int dir);
+    void push_pawn_quiet_moves(MoveList &ml, Bitboard attack, const int dir, U32 flags);
     void push_pawn_capture_moves(MoveList &ml, Bitboard attack, const int dir);
 
-    template<Color C>
-    [[nodiscard]] std::uint64_t perft(const int depth) noexcept;
-    template<Color C>
-    [[nodiscard]] std::uint64_t divide(const int depth) noexcept;
+    template<Color C> [[nodiscard]] std::uint64_t perft(const int depth) noexcept;
+    template<Color C> [[nodiscard]] std::uint64_t divide(const int depth) noexcept;
 
-    template<Color C>
-    [[nodiscard]] constexpr bool can_castle() const noexcept
+    template<Color C> [[nodiscard]] constexpr bool can_castle() const noexcept
     {
         switch (C) {
         case WHITE:
@@ -190,8 +188,7 @@ public:
         }
     }
 
-    template<Color C>
-    [[nodiscard]] constexpr bool can_castle_k() const noexcept
+    template<Color C> [[nodiscard]] constexpr bool can_castle_k() const noexcept
     {
         switch (C) {
         case WHITE:
@@ -205,8 +202,7 @@ public:
         }
     }
 
-    template<Color C>
-    [[nodiscard]] constexpr bool can_castle_q() const noexcept
+    template<Color C> [[nodiscard]] constexpr bool can_castle_q() const noexcept
     {
         switch (C) {
         case WHITE:
@@ -237,18 +233,15 @@ public:
         return castling & CASTLE_BQ;
     }
 
-    template<Color C>
-    constexpr void make_move(const U32 move) noexcept;
-    template<Color C>
-    constexpr void undo_move() noexcept;
-    template<Color C>
-    constexpr void make_nullmove() noexcept;
-    template<Color C>
-    constexpr void undo_nullmove() noexcept;
+    template<Color C> constexpr void make_move(const U32 move) noexcept;
+    template<Color C> constexpr void undo_move() noexcept;
+    template<Color C> constexpr void make_nullmove() noexcept;
+    template<Color C> constexpr void undo_nullmove() noexcept;
 
-    [[nodiscard]] constexpr U64 calculate_hash() const noexcept
+    constexpr void calculate_hash(U64& khash, U64& phash) const noexcept
     {
-        U64 khash = 0ULL;
+        khash = 0ULL;
+        phash = 0ULL;
         Bitboard bb;
 
         // Turn
@@ -261,6 +254,7 @@ public:
         while (bb) {
             int sq = next_square(bb);
             khash ^= piece_key[WHITE][PieceType::Pawn][sq];
+            phash ^= piece_key[WHITE][PieceType::Pawn][sq];
         }
         bb = pieces_cp<WHITE, PieceType::Knight>();
         while (bb) {
@@ -291,6 +285,7 @@ public:
         while (bb) {
             int sq = next_square(bb);
             khash ^= piece_key[BLACK][PieceType::Pawn][sq];
+            phash ^= piece_key[BLACK][PieceType::Pawn][sq];
         }
         bb = pieces_cp<BLACK, PieceType::Knight>();
         while (bb) {
@@ -325,8 +320,6 @@ public:
         if (ep_square != NO_SQUARE) {
             khash ^= ep_key[ep_square];
         }
-
-        return khash;
     }
 
     //! \brief  Retourne la couleur de la pièce située sur la case sq
@@ -339,7 +332,7 @@ public:
     //! \brief  Retourne le type de la pièce située sur la case sq
     [[nodiscard]] constexpr PieceType piece_on(const int sq) const noexcept
     {
-        for (int i = 0; i < 6; ++i) {
+        for (int i = Pawn; i <= King; ++i) {
             if (typePiecesBB[i] & square_to_bit(sq)) {
                 return PieceType(i);
             }
@@ -349,6 +342,7 @@ public:
 
     [[nodiscard]] constexpr int ep() const noexcept { return ep_square; }
     [[nodiscard]] constexpr std::uint64_t get_hash() const noexcept { return hash; }
+    [[nodiscard]] constexpr std::uint64_t get_pawn_hash() const noexcept { return pawn_hash; }
 
     template<Color C>
     [[nodiscard]] constexpr bool valid() const noexcept;
@@ -370,29 +364,27 @@ public:
                 > 0);
     }
 
-
-
-    //================================== partie UCI
-    // Fonction UCI
-    //    void position(std::istringstream &is);
-    //    void new_game();
-    //    void go(std::istringstream &is);
-    //    void stop();
-    //    void quit();
-
     //=================================== evaluation
-    [[nodiscard]] int evaluate();
-    template<Color C>
-    constexpr void evaluate_0(int &mg, int &eg, int &gamePhase);
+    template<bool Mode> [[nodiscard]] int evaluate();
+    template<Color C> constexpr void fast_evaluate(Score& score, int &phase);
+
+    Score slow_evaluate(int& phase);
+
+    template<Color Us> Score evaluate_pawns(const Bitboard UsPawnsBB, const Bitboard OtherPawnsBB);
+    template<Color Us> Score evaluate_knights(const Bitboard mobilityArea, int &phase);
+    template<Color Us> Score evaluate_bishops(const Bitboard occupiedBB, const Bitboard mobilityArea, int &phase);
+    template<Color Us> Score evaluate_rooks(const Bitboard UsPawnsBB, const Bitboard OtherPawnsBB, const Bitboard occupiedBB, const Bitboard mobilityArea, int &phase);
+    template<Color Us> Score evaluate_queens(const Bitboard UsPawnsBB, const Bitboard occupiedBB, const Bitboard mobilityArea, int &phase);
+    template<Color Us> Score evaluate_king();
 
     bool fast_see(const MOVE move, const int threshold) const;
+    void test_value(const std::string& fen );
 
 
-    void init_allmask();
     void init_bitmasks();
 
-    Bitboard colorPiecesBB[2] = {ZERO}; // occupancy board pour chaque couleur
-    Bitboard typePiecesBB[6] = {ZERO};  // bitboard pour chaque type de piece
+    Bitboard colorPiecesBB[2] = {0ULL}; // occupancy board pour chaque couleur
+    Bitboard typePiecesBB[7]  = {0ULL};  // bitboard pour chaque type de piece
     std::array<PieceType, 64> cpiece;   // tableau des pièces par case
     int x_king[2];                      // position des rois
 
@@ -407,7 +399,8 @@ public:
     int game_clock     = 0; // nombre de demi-coups de la partie
     int fullmove_clock = 1; // le nombre de coups complets. Il commence à 1 et est incrémenté de 1 après le coup des noirs.
 
-    U64 hash = 0ULL; // nombre unique (?) correspondant à la position (clef Zobrist)
+    U64 hash           = 0ULL;  // nombre unique (?) correspondant à la position (clef Zobrist)
+    U64 pawn_hash      = 0ULL;  // hash uniquement pour les pions
 
     std::vector<std::string> best_moves;  // meilleur coup (pour les test tactique)
     std::vector<std::string> avoid_moves; // coup à éviter (pour les test tactique)
@@ -428,7 +421,8 @@ public:
     //--------------------------------------------------------------------
     [[nodiscard]] bool is_repetition() const noexcept
     {
-        for (int i = game_clock - halfmove_clock; i < game_clock; ++i) {
+        for (int i = game_clock - halfmove_clock; i < game_clock; ++i)
+        {
             assert(i >= 0 && i < MAX_HIST);
 
             if (my_history[i].hash == hash)
@@ -469,6 +463,13 @@ public:
      */
 
     bool test_mirror(const std::string &line);
+
+    //------------------------------------------------------------Syzygy
+    void TBScore(const unsigned wdl, const unsigned dtz, int &score, int &bound) const;
+    bool probe_wdl(int &score, int &bound, int ply) const;
+    MOVE convertPyrrhicMove(unsigned result) const;
+    bool probe_root(MOVE& move) const;
+
 };
 
 //================================================================================

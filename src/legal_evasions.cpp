@@ -14,7 +14,7 @@ constexpr int PUSH[] = {8, -8};
 template <Color C>
 constexpr void Board::legal_evasions(MoveList& ml) noexcept
 {
-    const Color O = ~C;
+    constexpr Color O = ~C;
     const int   K = x_king[C];
 
     const Bitboard occupiedBB = occupied();     // toutes les pièces (Blanches + Noires)
@@ -108,9 +108,10 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
             pieceBB = occupiedBB ^ square_to_bit(from) ^ square_to_bit(ep) ^ square_to_bit(to);
 
             if ( !(MoveGen::bishop_moves(K, pieceBB) & bq & colorPiecesBB[O]) &&
-                 !(MoveGen::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
+                !(MoveGen::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
             {
-                add_capture_move(MoveType::EnPassant, ml, from, to, PieceType::Pawn, PieceType::Pawn);
+               add_capture_move(ml, from, to, PieceType::Pawn, PieceType::Pawn, Move::FLAG_ENPASSANT);
+//                add_quiet_move(ml, from, to, PieceType::Pawn, Move::FLAG_ENPASSANT);
             }
         }
 
@@ -120,9 +121,10 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
             pieceBB = occupiedBB ^ square_to_bit(from) ^ square_to_bit(ep) ^ square_to_bit(to);
 
             if ( !(MoveGen::bishop_moves(K, pieceBB) & bq & colorPiecesBB[O]) &&
-                 !(MoveGen::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
+                !(MoveGen::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
             {
-                add_capture_move(MoveType::EnPassant, ml, from, to, PieceType::Pawn, PieceType::Pawn);
+                add_capture_move(ml, from, to, PieceType::Pawn, PieceType::Pawn, Move::FLAG_ENPASSANT);
+//                add_quiet_move(ml, from, to, PieceType::Pawn, Move::FLAG_ENPASSANT);
             }
         }
     }
@@ -139,12 +141,12 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
     push_capture_promotions(ml, attackBB & Promotion_Rank[C], pawn_right);
     push_pawn_capture_moves(ml, attackBB & ~Promotion_Rank[C], pawn_right);
 
-        attackBB = (C ? pieceBB >> 8 : pieceBB << 8) & emptyBB;
+    attackBB = (C ? pieceBB >> 8 : pieceBB << 8) & emptyBB;
     push_quiet_promotions(ml, attackBB & Promotion_Rank[C], pawn_push);
-        
-        push_pawn_quiet_moves(MoveType::Normal, ml, attackBB & ~Promotion_Rank[C], pawn_push);
-        attackBB = (C ? (((pieceBB & RankMask8[6]) >> 8) & ~occupiedBB) >> 8 : (((pieceBB & RankMask8[1]) << 8) & ~occupiedBB) << 8) & emptyBB;
-        push_pawn_quiet_moves(MoveType::Double, ml, attackBB, 2 * pawn_push);
+
+    push_pawn_quiet_moves(ml, attackBB & ~Promotion_Rank[C], pawn_push, Move::FLAG_NONE);
+    attackBB = (C ? (((pieceBB & RankMask8[6]) >> 8) & ~occupiedBB) >> 8 : (((pieceBB & RankMask8[1]) << 8) & ~occupiedBB) << 8) & emptyBB;
+    push_pawn_quiet_moves(ml, attackBB, 2 * pawn_push, Move::FLAG_DOUBLE);
 
     // knight
 
@@ -195,14 +197,14 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
     {
         to = next_square(mask);
         if (!square_attacked<O>(to))
-            add_capture_move(MoveType::Capture, ml, K, to, PieceType::King, cpiece[to]);
+            add_capture_move(ml, K, to, PieceType::King, cpiece[to], Move::FLAG_NONE);
     }
     mask = MoveGen::king_moves(K) & ~occupiedBB;
     while (mask)
     {
         to = next_square(mask);
         if (!square_attacked<O>(to))
-            add_quiet_move(MoveType::Normal, ml, K, to, PieceType::King);
+            add_quiet_move(ml, K, to, PieceType::King, Move::FLAG_NONE);
     }
 
     // remet le roi dans l'échiquier

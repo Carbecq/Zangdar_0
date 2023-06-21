@@ -10,8 +10,9 @@
 #include "bitmask.h"
 #include <sstream>
 #include <iostream>
+#include "types.h"
 
-//! \brief  crée un bitboard à partir d'une position
+//! \brief  crée un bitboard à partir d'une case
 constexpr Bitboard square_to_bit(const int sq) noexcept { return(1ULL << sq);}
 
 //! \brief  récupère le bit à la position donnée
@@ -27,25 +28,33 @@ constexpr void unset_bit(Bitboard& b, const int sq) noexcept    { b &= ~(1ULL <<
 constexpr void flip(Bitboard& b, const int sq) noexcept     { b ^= (1ULL << sq);    }
 
 //! \brief change le bit en son opposé
-constexpr void flip2(Bitboard& b, const int sq1, const int sq2) noexcept { b ^= 1ULL << sq1 ^ 1ULL << sq2;    }
+constexpr void flip2(Bitboard& b, const int sq1, const int sq2) noexcept { b ^= (1ULL << sq1) ^ (1ULL << sq2);    }
 
 //! \brief met le LSB à zéro
 constexpr void unset_lsb(Bitboard& b) noexcept { b &= b-1; }
 
 //! \brief met le LSB à zéro, modifie le bitboard, retourne la position du LSB
+//! aussi appelée poplsb
 [[nodiscard]] constexpr int next_square(Bitboard& b) noexcept {
     auto index = std::countr_zero(b);
     b &= b - 1;
     return index;
 }
 
+[[nodiscard]] constexpr int PYRRHIC_next_square(Bitboard* b) noexcept {
+    auto index = std::countr_zero(*b);
+    *b &= *b - 1;
+    return index;
+}
+
 //! \brief retourne la position du LSB
 //!     Get the first occupied square from a bitboard
 //!     Finds the least significant 1-bit
-//!     Fonction aussi nommée : bitScanForward
+//!     Returns the number of consecutive 0 bits in the value of x, starting from the least significant bit ("right").
+//!     Fonction aussi nommée : bitScanForward, getlsb
 //!     Remplace __builtin_ctzll à partir de C++20
 [[nodiscard]] constexpr int first_square(Bitboard b) noexcept {
-    return std::countr_zero(b); // Returns the number of consecutive 0 bits in the value of x, starting from the least significant bit ("right").
+    return std::countr_zero(b);
 }
 
 //! \brief
@@ -89,18 +98,12 @@ constexpr void unset_lsb(Bitboard& b) noexcept { b &= b-1; }
   return BitScanTable[((b | b >> 32) * 0x03f79d71b4cb0a89ULL) >> 58];
 }
 
-
-[[nodiscard]] constexpr int  Bcount(Bitboard b) noexcept {
-    return std::popcount(b);
-}
-
+[[nodiscard]] constexpr int  Bcount(Bitboard b) noexcept { return std::popcount(b);}
 [[nodiscard]] constexpr bool Bempty(Bitboard b) noexcept { return b == 0ULL; }
 [[nodiscard]] constexpr bool Bsubset(Bitboard a, Bitboard b) noexcept { return( (a & b) == a); }
 
-
-
 /* Byte swap (= vertical mirror) */
-constexpr Bitboard byteswap(Bitboard b)
+constexpr Bitboard byte_swap(Bitboard b)
 {
 #if defined(_MSC_VER)
     return _byteswap_uint64(b);
@@ -114,18 +117,75 @@ constexpr Bitboard byteswap(Bitboard b)
 #endif
 }
 
+[[nodiscard]] constexpr Bitboard north(Bitboard b)  noexcept { return (b << 8); }
+[[nodiscard]] constexpr Bitboard south(Bitboard b)  noexcept { return (b >> 8); }
+[[nodiscard]] constexpr Bitboard east(Bitboard b)  noexcept  { return ((b << 1) & NOT_FILE_A_BB); }
+[[nodiscard]] constexpr Bitboard west(Bitboard b)  noexcept  { return ((b >> 1) & NOT_FILE_H_BB); }
+[[nodiscard]] constexpr Bitboard north_east(Bitboard b) noexcept { return((b << 9) & NOT_FILE_A_BB); }
+[[nodiscard]] constexpr Bitboard south_east(Bitboard b) noexcept {  return((b >> 7) & NOT_FILE_A_BB); }
+[[nodiscard]] constexpr Bitboard south_west(Bitboard b) noexcept { return((b >> 9) & NOT_FILE_H_BB); }
+[[nodiscard]] constexpr Bitboard north_west(Bitboard b) noexcept { return((b << 7) & NOT_FILE_H_BB); }
 
-[[nodiscard]] constexpr Bitboard adjacent(Bitboard b)  noexcept {
-return north(b) | south(b) | east(b) | west(b) | north_east(b) | north_west(b) | south_east(b) | south_west(b);
+[[nodiscard]] constexpr Bitboard north_north(Bitboard b)  noexcept { return (b << 16); }
+[[nodiscard]] constexpr Bitboard south_south(Bitboard b)  noexcept { return (b >> 16); }
+
+[[nodiscard]] constexpr Bitboard north_north_east(Bitboard b) noexcept { return((b << 17) & NOT_FILE_A_BB); }
+[[nodiscard]] constexpr Bitboard north_north_west(Bitboard b) noexcept { return((b << 15) & NOT_FILE_H_BB); }
+
+[[nodiscard]] constexpr Bitboard south_south_east(Bitboard b)  noexcept { return (b >> 15 & NOT_FILE_A_BB); }
+[[nodiscard]] constexpr Bitboard south_south_west(Bitboard b)  noexcept { return (b >> 17 & NOT_FILE_H_BB); }
+
+[[nodiscard]] constexpr Bitboard east_east_north(Bitboard b)  noexcept { return (b << 10 & NOT_FILE_AB_BB); }
+[[nodiscard]] constexpr Bitboard east_east_south(Bitboard b)  noexcept { return (b >> 6  & NOT_FILE_AB_BB); }
+
+[[nodiscard]] constexpr Bitboard west_west_north(Bitboard b)  noexcept { return (b << 6   & NOT_FILE_HG_BB); }
+[[nodiscard]] constexpr Bitboard west_west_south(Bitboard b)  noexcept { return (b >> 10  & NOT_FILE_HG_BB); }
+
+//! \brief Décale d'une case dans la direction donnée
+template <Direction D>
+[[nodiscard]] constexpr Bitboard ShiftBB(const Bitboard b)
+{
+    switch (D)
+    {
+    case NORTH:
+        return b << 8;
+        break;
+    case NORTH_EAST:
+        return (b << 9) & NOT_FILE_A_BB;
+        break;
+    case EAST:
+        return (b << 1) & NOT_FILE_A_BB;
+        break;
+    case SOUTH_EAST:
+        return (b >> 7) & NOT_FILE_A_BB;
+        break;
+    case SOUTH:
+        return b >> 8;
+        break;
+    case SOUTH_WEST:
+        return (b >> 9) & NOT_FILE_H_BB;
+        break;
+    case WEST:
+        return (b >> 1) & NOT_FILE_H_BB;
+        break;
+    case NORTH_WEST:
+        return (b << 7) & NOT_FILE_H_BB;
+        break;
+    }
 }
+
+//! \brief Décale le bitboard verticalement
+template <Direction D>
+[[nodiscard]] constexpr Bitboard shift(const Bitboard b) { return (D == NORTH) ? b << 8 : b >> 8; }
 
 //======================================
 //! \brief  Impression d'un Bitboard
 //--------------------------------------
-inline void PrintBB(const Bitboard bb)
+inline void PrintBB(const Bitboard bb, const std::string& message)
 {
     assert(bb);
 
+    std::cout << "--------------------------- " << message << std::endl;
     std::stringstream ss;
     int i = 56;
 

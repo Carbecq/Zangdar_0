@@ -3,7 +3,6 @@
 
 #include "defines.h"
 
-
 constexpr auto FILE_A_BB = 0x0101010101010101ULL;
 constexpr auto FILE_B_BB = 0x0202020202020202ULL;
 constexpr auto FILE_C_BB = 0x0404040404040404ULL;
@@ -45,7 +44,7 @@ constexpr Bitboard ADiagMask16[] = {
 };
 
 
-constexpr Bitboard Adjacent_Files[] =
+constexpr Bitboard AdjacentFilesMask8[8] =
 {
  FILE_B_BB,
  FILE_A_BB | FILE_C_BB,
@@ -73,34 +72,11 @@ constexpr Bitboard NOT_FILE_H_BB = ~FILE_H_BB;
 constexpr Bitboard NOT_FILE_HG_BB = 4557430888798830399ULL;
 constexpr Bitboard NOT_FILE_AB_BB = 18229723555195321596ULL;
 
-[[nodiscard]] constexpr Bitboard north(Bitboard b)  noexcept { return (b << 8); }
-[[nodiscard]] constexpr Bitboard south(Bitboard b)  noexcept { return (b >> 8); }
-[[nodiscard]] constexpr Bitboard east(Bitboard b)  noexcept  { return ((b << 1) & NOT_FILE_A_BB); }
-[[nodiscard]] constexpr Bitboard west(Bitboard b)  noexcept  { return ((b >> 1) & NOT_FILE_H_BB); }
-[[nodiscard]] constexpr Bitboard north_east(Bitboard b) noexcept { return((b << 9) & NOT_FILE_A_BB); }
-[[nodiscard]] constexpr Bitboard south_east(Bitboard b) noexcept {  return((b >> 7) & NOT_FILE_A_BB); }
-[[nodiscard]] constexpr Bitboard south_west(Bitboard b) noexcept { return((b >> 9) & NOT_FILE_H_BB); }
-[[nodiscard]] constexpr Bitboard north_west(Bitboard b) noexcept { return((b << 7) & NOT_FILE_H_BB); }
-
-[[nodiscard]] constexpr Bitboard north_north(Bitboard b)  noexcept { return (b << 16); }
-[[nodiscard]] constexpr Bitboard south_south(Bitboard b)  noexcept { return (b >> 16); }
-
-[[nodiscard]] constexpr Bitboard north_north_east(Bitboard b) noexcept { return((b << 17) & NOT_FILE_A_BB); }
-[[nodiscard]] constexpr Bitboard north_north_west(Bitboard b) noexcept { return((b << 15) & NOT_FILE_H_BB); }
-
-[[nodiscard]] constexpr Bitboard south_south_east(Bitboard b)  noexcept { return (b >> 15 & NOT_FILE_A_BB); }
-[[nodiscard]] constexpr Bitboard south_south_west(Bitboard b)  noexcept { return (b >> 17 & NOT_FILE_H_BB); }
-
-[[nodiscard]] constexpr Bitboard east_east_north(Bitboard b)  noexcept { return (b << 10 & NOT_FILE_AB_BB); }
-[[nodiscard]] constexpr Bitboard east_east_south(Bitboard b)  noexcept { return (b >> 6  & NOT_FILE_AB_BB); }
-
-[[nodiscard]] constexpr Bitboard west_west_north(Bitboard b)  noexcept { return (b << 6   & NOT_FILE_HG_BB); }
-[[nodiscard]] constexpr Bitboard west_west_south(Bitboard b)  noexcept { return (b >> 10  & NOT_FILE_HG_BB); }
-
 extern Bitboard RankMask64[64];
 extern Bitboard FileMask64[64];
 extern Bitboard DiagonalMask64[64];
 extern Bitboard AntiDiagonalMask64[64];
 extern Bitboard SquareMask64[64];
+extern Bitboard AdjacentFilesMask64[64];
 
 #endif // BITMASK_H

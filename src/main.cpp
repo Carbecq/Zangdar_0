@@ -8,6 +8,7 @@
 
 // Globals
 TranspositionTable  Transtable(DEFAULT_HASH_SIZE);
+bool                UseSyzygy = false;
 PolyBook            Book;
 ThreadPool          threadPool;
 

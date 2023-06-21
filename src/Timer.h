@@ -1,14 +1,13 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-// Code inspiré par Blunder
-
 class Timer;
 
 #include <cstdint>
 #include <chrono>
 #include "defines.h"
-#include "color.h"
+#include "types.h"
+
 
 class Timer
 {
@@ -41,6 +40,7 @@ public:
     bool checkLimits() const;
     bool finishOnThisDepth(U64& elapsed);
     int  getSearchDepth() const { return(searchDepth); }
+    int  elapsedTime();
 
 private:
     static constexpr double BUFFER = 50.0;

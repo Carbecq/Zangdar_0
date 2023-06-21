@@ -1,5 +1,7 @@
 #include "MovePicker.h"
-#include "piece.h"
+#include "evaluate.h"
+#include "types.h"
+
 
 //=====================================================
 //! \brief  Constructeur
@@ -61,9 +63,13 @@ void MovePicker::scoreMoves(int ply, const MOVE tt_move)
 //            }
             move_list->values[index] = GOOD_CAPTURE + MvvLvaScores[Move::captured(move)][Move::piece(move)];
         }
+//       else if (Move::is_enpassant(move))
+//        {
+//            move_list->values[index] = GOOD_CAPTURE + MvvLvaScores[Pawn][Pawn];
+//        }
         else if (Move::is_promoting(move))
         {
-            move_list->values[index] = PROMOTION_BONUS + Piece_Value[Move::piece(move)];
+            move_list->values[index] = PROMOTION_BONUS + mg_value[Move::piece(move)];
         }
         else if (move == Killer1)
         {
@@ -96,7 +102,7 @@ bool MovePicker::hasNext() const
 MOVE MovePicker::getNext()
 {
     size_t bestIndex = currHead;
-    int    bestScore = -INF;
+    int    bestScore = -INFINITE;
 
     for (size_t index = currHead; index < move_list->count; index++)
     {
@@ -113,7 +119,7 @@ MOVE MovePicker::getNext()
     return(move_list->moves[currHead++]);
 }
 
-std::string pchar[6] = {"Pion", "Cavalier", "Fou", "Tour", "Dame", "Roi"};
+std::string pchar[7] = {"NoPiece", "Pion", "Cavalier", "Fou", "Tour", "Dame", "Roi"};
 //void MovePicker::verify_MvvLva()
 //{
 //    for(int Victim = PieceType::Pawn; Victim <= PieceType::King; ++Victim)

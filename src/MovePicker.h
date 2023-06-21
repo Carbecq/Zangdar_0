@@ -9,13 +9,14 @@ class MovePicker;
 #include "Board.h"
 #include "OrderingInfo.h"
 
-constexpr int MvvLvaScores[6][6] = {
-    {16, 15, 14, 13, 12, 11}, // victim Pawn
-    {26, 25, 24, 23, 22, 21}, // victim Knight
-    {36, 35, 34, 33, 32, 31}, // victim Bishop
-    {46, 45, 44, 43, 42, 41}, // vitcim Rook
-    {56, 55, 54, 53, 52, 51}, // victim Queen
-    { 0,  0,  0,  0,  0,  0}  // victim King
+constexpr int MvvLvaScores[7][7] = {
+    {0, 16, 15, 14, 13, 12, 11}, // victim No_Type
+    {0, 16, 15, 14, 13, 12, 11}, // victim Pawn
+    {0, 26, 25, 24, 23, 22, 21}, // victim Knight
+    {0, 36, 35, 34, 33, 32, 31}, // victim Bishop
+    {0, 46, 45, 44, 43, 42, 41}, // vitcim Rook
+    {0, 56, 55, 54, 53, 52, 51}, // victim Queen
+    {0,  0,  0,  0,  0,  0,  0}  // victim King
 };
 
 /**

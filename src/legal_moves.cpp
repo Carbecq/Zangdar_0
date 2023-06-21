@@ -34,7 +34,7 @@ void Board::apply_token(const std::string& token) noexcept
 template <Color C>
 constexpr void Board::legal_moves(MoveList& ml) noexcept
 {
-    const Color O = ~C;
+    constexpr Color O = ~C;
     const int   K = x_king[C];
 
     const Bitboard occupiedBB = occupied();     // toutes les pièces (Blanches + Noires)
@@ -119,35 +119,35 @@ constexpr void Board::legal_moves(MoveList& ml) noexcept
         // not in check: castling & pinned pieces moves
 
         // castling
-            if (can_castle_k<C>())
-            {
-                /*  MoveGen::squares_between(ksq, ksc_castle_king_to[us])   : case F1
+        if (can_castle_k<C>())
+        {
+            /*  MoveGen::squares_between(ksq, ksc_castle_king_to[us])   : case F1
                  *  square_to_bit(ksc_castle_king_to[us])                   : case G1
                  */
-                const Bitboard blockers         = occupied() ^ square_to_bit(K) ^ square_to_bit(ksc_castle_rook_from[C]);
-                const Bitboard king_path        = (MoveGen::squares_between(K, ksc_castle_king_to[C])  |
-                                                   square_to_bit(ksc_castle_king_to[C])) ;
-                const bool     king_path_clear  = Bempty(king_path & blockers);
-                const Bitboard rook_path        = MoveGen::squares_between(ksc_castle_rook_to[C], ksc_castle_rook_from[C])
-                        | square_to_bit(ksc_castle_rook_to[C]);
-                const bool     rook_path_clear  = Bempty(rook_path & blockers);
+            const Bitboard blockers         = occupied() ^ square_to_bit(K) ^ square_to_bit(ksc_castle_rook_from[C]);
+            const Bitboard king_path        = (MoveGen::squares_between(K, ksc_castle_king_to[C])  |
+                                        square_to_bit(ksc_castle_king_to[C])) ;
+            const bool     king_path_clear  = Bempty(king_path & blockers);
+            const Bitboard rook_path        = MoveGen::squares_between(ksc_castle_rook_to[C], ksc_castle_rook_from[C])
+                                       | square_to_bit(ksc_castle_rook_to[C]);
+            const bool     rook_path_clear  = Bempty(rook_path & blockers);
 
-                if (king_path_clear && rook_path_clear && !(squares_attacked<O>() & king_path))
-                    add_quiet_move(MoveType::KingCastle, ml, K, ksc_castle_king_to[C], PieceType::King);
-            }
-            if (can_castle_q<C>())
-            {
-                const Bitboard blockers         = occupied() ^ square_to_bit(K) ^ square_to_bit(qsc_castle_rook_from[C]);
-                const Bitboard king_path        = (MoveGen::squares_between(K, qsc_castle_king_to[C]) |
-                                                   square_to_bit(qsc_castle_king_to[C]));
-                const bool     king_path_clear  = Bempty(king_path & blockers);
-                const Bitboard rook_path        = MoveGen::squares_between(qsc_castle_rook_to[C], qsc_castle_rook_from[C])
-                        | square_to_bit(qsc_castle_rook_to[C]);
-                const bool     rook_path_clear = Bempty(rook_path & blockers);
+            if (king_path_clear && rook_path_clear && !(squares_attacked<O>() & king_path))
+                add_quiet_move(ml, K, ksc_castle_king_to[C], PieceType::King, Move::FLAG_CASTLE);
+        }
+        if (can_castle_q<C>())
+        {
+            const Bitboard blockers         = occupied() ^ square_to_bit(K) ^ square_to_bit(qsc_castle_rook_from[C]);
+            const Bitboard king_path        = (MoveGen::squares_between(K, qsc_castle_king_to[C]) |
+                                        square_to_bit(qsc_castle_king_to[C]));
+            const bool     king_path_clear  = Bempty(king_path & blockers);
+            const Bitboard rook_path        = MoveGen::squares_between(qsc_castle_rook_to[C], qsc_castle_rook_from[C])
+                                       | square_to_bit(qsc_castle_rook_to[C]);
+            const bool     rook_path_clear = Bempty(rook_path & blockers);
 
-                if (king_path_clear && rook_path_clear && !(squares_attacked<O>() & king_path))
-                    add_quiet_move(MoveType::QueenCastle, ml, K, qsc_castle_king_to[C], PieceType::King);
-            }
+            if (king_path_clear && rook_path_clear && !(squares_attacked<O>() & king_path))
+                add_quiet_move(ml, K, qsc_castle_king_to[C], PieceType::King, Move::FLAG_CASTLE);
+        }
 
         // pawn (pinned)
         pieceBB = typePiecesBB[Pawn] & pinnedBB;
@@ -158,24 +158,24 @@ constexpr void Board::legal_moves(MoveList& ml) noexcept
 
             if (d == abs(pawn_left) && (square_to_bit(to = from + pawn_left) & MoveGen::pawn_attacks(C, from) & enemyBB ))
             {
-                    if (Square::is_on_seventh_rank<C>(from))
+                if (Square::is_on_seventh_rank<C>(from))
                     push_capture_promotion(ml, from, to);
                 else
-                    add_capture_move(MoveType::Capture, ml, from, to, PieceType::Pawn, cpiece[to]);
+                    add_capture_move(ml, from, to, PieceType::Pawn, cpiece[to], Move::FLAG_NONE);
             }
             else if (d == abs(pawn_right) && (square_to_bit(to = from + pawn_right) & MoveGen::pawn_attacks(C, from) & enemyBB))
             {
                 if (Square::is_on_seventh_rank<C>(from))
                     push_capture_promotion(ml, from, to);
                 else
-                    add_capture_move(MoveType::Capture, ml, from, to, PieceType::Pawn, cpiece[to]);
+                    add_capture_move(ml, from, to, PieceType::Pawn, cpiece[to], Move::FLAG_NONE);
             }
 
             if (/*do_quiet && */ d == abs(pawn_push) && (square_to_bit(to = from + pawn_push) & emptyBB))
             {
-                add_quiet_move(MoveType::Normal, ml, from, to, PieceType::Pawn);
+                add_quiet_move(ml, from, to, PieceType::Pawn, Move::FLAG_NONE);
                 if (Square::is_on_second_rank<C>(from) && (square_to_bit(to += pawn_push) & emptyBB))
-                    add_quiet_move(MoveType::Double, ml, from, to, PieceType::Pawn);
+                    add_quiet_move(ml, from, to, PieceType::Pawn, Move::FLAG_DOUBLE);
             }
         }
 
@@ -255,10 +255,11 @@ constexpr void Board::legal_moves(MoveList& ml) noexcept
         {
             pieceBB = occupiedBB ^ square_to_bit(from) ^ square_to_bit(ep) ^ square_to_bit(to);
 
-            if ( !(MoveGen::bishop_moves(K, pieceBB) & bq & colorPiecesBB[O]) &&
-                 !(MoveGen::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
+            if (!(MoveGen::bishop_moves(K, pieceBB) & bq & colorPiecesBB[O]) &&
+                !(MoveGen::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
             {
-                add_capture_move(MoveType::EnPassant, ml, from, to, PieceType::Pawn, PieceType::Pawn);
+                add_capture_move(ml, from, to, PieceType::Pawn, PieceType::Pawn, Move::FLAG_ENPASSANT);
+//                add_quiet_move(ml, from, to, PieceType::Pawn, Move::FLAG_ENPASSANT);
             }
         }
 
@@ -268,9 +269,10 @@ constexpr void Board::legal_moves(MoveList& ml) noexcept
             pieceBB = occupiedBB ^ square_to_bit(from) ^ square_to_bit(ep) ^ square_to_bit(to);
 
             if ( !(MoveGen::bishop_moves(K, pieceBB) & bq & colorPiecesBB[O]) &&
-                 !(MoveGen::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
+                !(MoveGen::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
             {
-                add_capture_move(MoveType::EnPassant, ml, from, to, PieceType::Pawn, PieceType::Pawn);
+                add_capture_move(ml, from, to, PieceType::Pawn, PieceType::Pawn, Move::FLAG_ENPASSANT);
+//                add_quiet_move(ml, from, to, PieceType::Pawn, Move::FLAG_ENPASSANT);
             }
         }
     }
@@ -287,12 +289,12 @@ constexpr void Board::legal_moves(MoveList& ml) noexcept
     push_capture_promotions(ml, attackBB & Promotion_Rank[C], pawn_right);
     push_pawn_capture_moves(ml, attackBB & ~Promotion_Rank[C], pawn_right);
 
-        attackBB = (C ? pieceBB >> 8 : pieceBB << 8) & emptyBB;
+    attackBB = (C ? pieceBB >> 8 : pieceBB << 8) & emptyBB;
     push_quiet_promotions(ml, attackBB & Promotion_Rank[C], pawn_push);
-        
-        push_pawn_quiet_moves(MoveType::Normal, ml, attackBB & ~Promotion_Rank[C], pawn_push);
-        attackBB = (C ? (((pieceBB & RankMask8[6]) >> 8) & ~occupiedBB) >> 8 : (((pieceBB & RankMask8[1]) << 8) & ~occupiedBB) << 8) & emptyBB;
-        push_pawn_quiet_moves(MoveType::Double, ml, attackBB, 2 * pawn_push);
+
+    push_pawn_quiet_moves(ml, attackBB & ~Promotion_Rank[C], pawn_push, Move::FLAG_NONE);
+    attackBB = (C ? (((pieceBB & RankMask8[6]) >> 8) & ~occupiedBB) >> 8 : (((pieceBB & RankMask8[1]) << 8) & ~occupiedBB) << 8) & emptyBB;
+    push_pawn_quiet_moves(ml, attackBB, 2 * pawn_push, Move::FLAG_DOUBLE);
 
     // knight
 
@@ -343,14 +345,14 @@ constexpr void Board::legal_moves(MoveList& ml) noexcept
     {
         to = next_square(mask);
         if (!square_attacked<O>(to))
-            add_capture_move(MoveType::Capture, ml, K, to, PieceType::King, cpiece[to]);
+            add_capture_move(ml, K, to, PieceType::King, cpiece[to], Move::FLAG_NONE);
     }
     mask = MoveGen::king_moves(K) & ~occupiedBB;
     while (mask)
     {
         to = next_square(mask);
         if (!square_attacked<O>(to))
-            add_quiet_move(MoveType::Normal, ml, K, to, PieceType::King);
+            add_quiet_move(ml, K, to, PieceType::King, Move::FLAG_NONE);
     }
 
     // remet le roi dans l'échiquier

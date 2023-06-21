@@ -7,10 +7,9 @@
 //!         donc sans prise ou promotion.
 //-------------------------------------------------------------
 template <Color C>
-int Search::quiescence(Board &board, int ply, int alpha, int beta, MOVE* pv, ThreadData* td)
+int Search::quiescence(Board &board, int ply, int alpha, int beta, ThreadData* td)
 {
     assert(beta > alpha);
-    MOVE new_pv[MAX_PLY] = {0};
 
     td->nodes++;
 
@@ -21,8 +20,6 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, MOVE* pv, Thr
         return 0;
     }
 
-    *pv = 0;
-
     // partie nulle ?
     if(board.is_draw<C>())
         return 0;
@@ -30,13 +27,13 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, MOVE* pv, Thr
     // profondeur de recherche max atteinte
     // prevent overflows
     if (ply >= MAX_PLY - 1)
-        return board.is_in_check<C>() ? 0 : board.evaluate();
+        return board.is_in_check<C>() ? 0 : board.evaluate<true>();
 
     // partie trop longue
     if (board.game_clock >= MAX_HIST - 1)
-        return board.evaluate();
+        return board.evaluate<true>();
 
-    int  best_score = -INF;
+    int  best_score = -INFINITE;
     int  score;
 
     //TODO passer in_check en argument
@@ -44,10 +41,10 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, MOVE* pv, Thr
     MoveList move_list;
 
     // stand pat
-    if (!in_check)
-    {
+ //   if (!in_check)
+ //   {
         // you do not allow the side to move to stand pat if the side to move is in check.
-        best_score = board.evaluate();
+        best_score = board.evaluate<true>();
 
         // le score est trop mauvais pour moi, on n'a pas besoin
         // de chercher plus loin
@@ -60,11 +57,11 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, MOVE* pv, Thr
             alpha = best_score;
 
         board.legal_captures<C>(move_list);
-    }
-    else
-    {
-        board.legal_evasions<C>(move_list);
-    }
+//    }
+//    else
+//    {
+//        board.legal_evasions<C>(move_list);
+//    }
 
     MovePicker movePicker(ply, 0, &my_orderingInfo, &board, &move_list);
     MOVE move;
@@ -79,7 +76,7 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, MOVE* pv, Thr
             continue;
 
         board.make_move<C>(move);
-        score = -quiescence<~C>(board, ply+1, -beta, -alpha, new_pv, td);
+        score = -quiescence<~C>(board, ply+1, -beta, -alpha, td);
         board.undo_move<C>();
 
         if (stopped)
@@ -90,28 +87,26 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, MOVE* pv, Thr
         {
             /* we have a cutoff, so update our killers: */
             //TODO : utiliser killer ici ?
+            //TODO promotion ? prise-enpassant ?
             if (Move::is_capturing(move) == false)
                 my_orderingInfo.updateKillers(ply, move);
             return score;
         }
 
+        // Found a new best move in this position
         if (score > best_score)
         {
             best_score = score;
+
+            // If score beats alpha we update alpha
             if (score > alpha)
-            {
                 alpha = score;
-                update_pv(pv, new_pv, move);
-            }
+
         }
     }
 
-    // est-on mat ou pat ?
-    if (best_score == -INF)
-        return in_check ? -MATE + ply : 0;
-
-    return best_score;  // return the best score found so far
+    return best_score;
 }
 
-template int Search::quiescence<WHITE>(Board &board, int ply, int alpha, int beta, MOVE* pv, ThreadData* td);
-template int Search::quiescence<BLACK>(Board &board, int ply, int alpha, int beta, MOVE* pv, ThreadData* td);
+template int Search::quiescence<WHITE>(Board &board, int ply, int alpha, int beta, ThreadData* td);
+template int Search::quiescence<BLACK>(Board &board, int ply, int alpha, int beta, ThreadData* td);

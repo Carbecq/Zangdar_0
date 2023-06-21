@@ -1,6 +1,5 @@
 #include <iomanip>
 #include "PolyBook.h"
-#include "piece.h"
 #include <string>
 #include "MoveGen.h"
 #include "ThreadPool.h"
@@ -262,8 +261,9 @@ MOVE PolyBook::poly_to_move(U16 polyMove, const Board& board)
     PieceType piece = board.cpiece[from];
     PieceType capt  = board.cpiece[dest];
     PieceType promo = static_cast<PieceType>(pp);
+    int       flags = Move::FLAG_NONE;
 
-    return Move::CODE(Normal, from, dest, piece, capt, promo);
+    return Move::CODE(from, dest, piece, capt, promo, flags);
 }
 
 

@@ -5,13 +5,17 @@
 #include <string>
 #include <vector>
 #include <atomic>
+#include <iostream>
+#include <bitset>
+
+const std::string VERSION = "2.17.08";
 
 #define HASH
-#define TT_XOR
-#define NEW_EVAL
+#define USE_CACHE
+//#define TT_XOR
 //#define PRETTY
-//#define PVS
-#define LMR
+
+#define LMP
 
 //#define DEBUG_EVAL
 //#define DEBUG_LOG
@@ -32,8 +36,10 @@ using I64   = int64_t;
 using U64   = uint64_t;
 using CHAR  = char;
 using UCHAR = unsigned char;
-using Bitboard = uint64_t;
-using MOVE  = U32;
+
+using Bitboard  = U64;
+using MOVE      = U32;
+using Score     = int;
 
 static constexpr int MAX_PLY    = 120;     // profondeur max de recherche (en demi-coups)
 static constexpr int MAX_HIST   = 800;     // longueur max de la partie (en demi-coups)
@@ -47,21 +53,35 @@ static constexpr int MAX_HASH_SIZE      = 1024;
 
 static constexpr int MAX_THREADS    = 32;
 
-static constexpr int INVALID        = 99999;
-static constexpr int INF            = 32000;
-static constexpr int MATE           = 30000;
-static constexpr int MAX_EVAL       = MATE - MAX_PLY;
-static constexpr int TB_WIN_BOUND   = MAX_EVAL - MAX_PLY;
-static constexpr int INF_BOUND      = INF;
+static constexpr int MATE           = 31000;
+static constexpr int MATE_IN_X      = MATE - MAX_PLY;
+static constexpr int TBWIN          = 30000;
+static constexpr int TBWIN_IN_X     = TBWIN - MAX_PLY;
+
+static constexpr int INFINITE       = MATE + 1;
+static constexpr int NOSCORE        = MATE + 2;
 
 /*
- *   -INF     -MATE    -MAX_EVAL    |    MAX_EVAL     MATE     INF
- *                 xxxx                          xxxxx                      zone de mat
+ *   -INFINITE     -MATE    -MATE_IN_X    |  TBWIN_IN_X.....TBWIN.....MATE_IN_X.....MATE.....INFINITE
+ *                 xxxx                                                        xxxxx                      zone de mat
  */
 
-
-static constexpr int LMRLegalMovesLimit = 4;
-static constexpr int LMRDepthLimit = 3;
+/*  Explications
+ *
+ *   MATE et MATE_IN_X servent à repérer et afficher les mats
+ *   Dans le cas d'un mat, il faut avoir un score indépendant de la profondeur de recherche : score = -MATE + ply
+ *   Le score maximum étant MATE
+ *
+ *   Dans le cas d'un score provenant des tables Syzygy, on ne peut pas savoir si c'est un mat.
+ *   On a toujours DTM=0 (Distance To Mat).
+ *   C'est pourquoi, comme on veut toujours avoir un score indépendant de la profondeur de recherche,
+ *   on prend une valeur référence différente et inférieure : TBWIN
+ *   On ne prend pas une référence supérieure, car MATE est le score maximum que l'on peut avoir.
+ *
+ *   Comme la table de transposition sert à la fois pour les scores "normaux" et ceux provenant
+ *   des tables Syzygy, on prend comme référence TBWIN.
+ *
+ */
 
 //=========================================
 // FEN debug positions
@@ -80,14 +100,7 @@ const std::string LCTII_01        = "r3kb1r/3n1pp1/p6p/2pPp2q/Pp2N3/3B2PP/1PQ2P2
 const std::string FINE_70         = "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -";
 const std::string WAC_2           = "8/7p/5k2/5p2/p1p2P2/Pr1pPK2/1P1R3P/8 b - -";
 
-//=========================================
-
-constexpr U64 ONE  = (U64) 1;
-constexpr U64 ZERO = (U64) 0;
-
 //=========================================================
-
-const std::string Version = VERSION;
 
 #ifdef HOME
 const std::string Home = HOME;
@@ -95,7 +108,19 @@ const std::string Home = HOME;
     const std::string Home = "./";
 #endif
 
+
 extern std::vector<std::string> split(const std::string& s, char delimiter);
 extern void printlog(const std::string& message);
+extern bool UseSyzygy;
+
+//======================================
+//! \brief Ecriture en binaire
+//--------------------------------------
+template<class T>
+void binary_print(T code, const std::string& message)
+{
+    std::string binary = std::bitset<8*sizeof(T)>(code).to_string(); //to binary
+    std::cout << message << " : " << binary<< std::endl;
+}
 
 #endif // DEFINES_H

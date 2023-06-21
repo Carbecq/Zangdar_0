@@ -1,9 +1,10 @@
 #include "Board.h"
 #include "Move.h"
 #include "MoveGen.h"
+#include "evaluate.h"
 
 
-constexpr int SEE_VALUE[6] = {100, 300, 300, 500, 900, 9999};      // Leorik
+constexpr int SEE_VALUE[7] = {0, 100, 300, 300, 500, 900, 9999};
 
 //==========================================================================
 //! \brief  Détermine si le coup est avantageux :
@@ -16,8 +17,8 @@ bool Board::fast_see(const MOVE move, const int threshold) const
 
     // Cette routine n'est appelée qu'en cas de capture
 
-    int from = Move::from(move);
-    int dest = Move::dest(move);
+    const int from = Move::from(move);
+    const int dest = Move::dest(move);
 
     // si la valeur de la pièce prise est inférieure au threshold,
     // ce n'est pas la peine de continuer
@@ -49,8 +50,8 @@ bool Board::fast_see(const MOVE move, const int threshold) const
     Bitboard all_attackersBB = all_attackers(dest, occupiedBB);
 
     // Bitboards des sliders
-    Bitboard bqBB = typePiecesBB[Bishop] | typePiecesBB[Queen];
-    Bitboard rqBB = typePiecesBB[Rook]   | typePiecesBB[Queen];
+    const Bitboard bqBB = typePiecesBB[Bishop] | typePiecesBB[Queen];
+    const Bitboard rqBB = typePiecesBB[Rook]   | typePiecesBB[Queen];
 
     // C'est au tour de l'adversaire de jouer
     Color color = ~turn();
