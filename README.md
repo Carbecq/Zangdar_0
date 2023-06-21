@@ -13,7 +13,7 @@ Why Zangdar ? Well look for the Naheulbeuk dungeon !!
 I would like to thank specially the authors of Vice, TSCP, Gerbil. They helped me a lot understand several aspects of programmation.
 I also use the M42 library for generating attacks; and took inspiration from the Libchess library. 
 
-At present, Zangdar can play honestly. I done several matches, and I think Zangdar has an elo of about 2550.
+At present, Zangdar can play honestly. I done several matches, and I think Zangdar has an elo of about 2700.
 It has the following features :
 
 + **Language** 
@@ -31,8 +31,9 @@ It has the following features :
   - Killer Heuristic
   - Transposition Table, with 4 buckets
   - Null Move 
-  - Late Move Reduction
+  - Late Move Pruning
   - Razoring
+  - Internal Iterative Deepening
 
 + **Parallel**
   - can use several threads
@@ -43,13 +44,21 @@ It has the following features :
   - Piece/Square Table
   - Positional bonus
   - Mobility
+ 
++ **Syzygy Tables**
+  - Can use of endgame tables, but need a SSD to work correctly
+ 
++ **Opening Book**
+  - Although a book may be provided by the interface, it is possible to specify your own book.
 
 + **Communication**
   - UCI
   - Options to change OpeningBook usage, OpeningBook location, Hash size, Threads number
-  
+ 
+   
 + **Usage**
-I provide two binaries, one for Windows and one for Linux. Both are compiled in static, so you don't need extrernal libraries. The Linux one is done with Linux Ubuntu, I can't say if it will work with another distro.
+- The program is only an engine, so it need one interface (Arena, Banksgui...).
+- I provide two binaries, one for Windows and one for Linux. Both are compiled in static, so you don't need extrernal libraries. The Linux one is done with Linux Ubuntu, I can't say if it will work with another distro.
 By default, the opening book is disabled. It can be re-enabled by using an uci option. Zangdar will search the book in the binary's directory. This location can too be specified with an uci option. The book is of polyglot format, and must be named 'book.bin'.
 
 + **Compilation**
