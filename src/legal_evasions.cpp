@@ -6,7 +6,7 @@ constexpr int PUSH[] = {8, -8};
 
 
 //=================================================================
-//! \brief  Génération de tous les captures légales
+//! \brief  Génération de tous les coups légaux, échappant à un échec
 //! \param  ml  Liste des coups dans laquelle on va stocker les coups
 //!
 //! algorithme de Mperft
@@ -111,7 +111,6 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
                 !(MoveGen::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
             {
                add_capture_move(ml, from, to, PieceType::Pawn, PieceType::Pawn, Move::FLAG_ENPASSANT);
-//                add_quiet_move(ml, from, to, PieceType::Pawn, Move::FLAG_ENPASSANT);
             }
         }
 
@@ -124,7 +123,6 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
                 !(MoveGen::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
             {
                 add_capture_move(ml, from, to, PieceType::Pawn, PieceType::Pawn, Move::FLAG_ENPASSANT);
-//                add_quiet_move(ml, from, to, PieceType::Pawn, Move::FLAG_ENPASSANT);
             }
         }
     }

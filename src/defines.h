@@ -8,7 +8,7 @@
 #include <iostream>
 #include <bitset>
 
-const std::string VERSION = "2.17.08";
+const std::string VERSION = "2.17.09";
 
 #define HASH
 #define USE_CACHE

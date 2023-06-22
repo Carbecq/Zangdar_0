@@ -36,13 +36,12 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, ThreadData* t
     int  best_score = -INFINITE;
     int  score;
 
-    //TODO passer in_check en argument
     bool in_check = board.is_in_check<C>();
     MoveList move_list;
 
     // stand pat
- //   if (!in_check)
- //   {
+    if (!in_check)
+    {
         // you do not allow the side to move to stand pat if the side to move is in check.
         best_score = board.evaluate<true>();
 
@@ -57,11 +56,11 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, ThreadData* t
             alpha = best_score;
 
         board.legal_captures<C>(move_list);
-//    }
-//    else
-//    {
-//        board.legal_evasions<C>(move_list);
-//    }
+    }
+    else
+    {
+        board.legal_evasions<C>(move_list);
+    }
 
     MovePicker movePicker(ply, 0, &my_orderingInfo, &board, &move_list);
     MOVE move;
@@ -101,7 +100,6 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, ThreadData* t
             // If score beats alpha we update alpha
             if (score > alpha)
                 alpha = score;
-
         }
     }
 
