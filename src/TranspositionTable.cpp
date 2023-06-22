@@ -87,21 +87,13 @@ void TranspositionTable::set_size(int mbsize)
 
     assert(tt_size!=0 && (tt_size&(tt_size-1))==0); // power of 2
 
-    // Blunder 8 : 2 buckets , age = 0 ou 1
-    // Leorik    : 2 buckets
-    // berserk   : 2 buckets
-
     tt_buckets = 4;
-    //    mask = tt_size - 1;    // Koivisto, Fruit21 (clustersize=4), Berserk (bucketsize=2)
-    //    mask = size - 2;
-    //    mask = size - 4;        // Sungorus, Rodent
     tt_mask = tt_size - tt_buckets;
 
     tt_entries = new HashEntry[tt_size];
     clear();
     clear_pawn_table();
     clear_eval_table();
-
 
 #ifdef DEBUG_LOG
     sprintf(message, "TranspositionTable init complete with %d entries of %lu bytes for a total of %lu bytes (%lu MB) \n",
@@ -127,34 +119,6 @@ void TranspositionTable::resize(int mbsize)
     set_size(mbsize);
 }
 
-#ifdef TT_XOR
-//void VerifyEntrySMP(int k, HashEntry *entry)
-//{
-//    int e_flag = Move::flag(entry->move);
-//    int e_move = Move::move(entry->move);
-
-//    U64 smp_data = FOLD_DATA(entry->score, entry->depth, e_flag, e_move);
-//    U64 smp_key  = entry->hash ^ smp_data;
-
-//    if (smp_data != entry->smp_data) { printf("data error %d", k); exit(1);}
-//    if (smp_key != entry->smp_key) { printf("smp_key error %d", k); exit(1);}
-
-//    int move = EXTRACT_MOVE(smp_data);
-//    int flag = EXTRACT_FLAGS(smp_data);
-//    int score = EXTRACT_SCORE(smp_data);
-//    int depth = EXTRACT_DEPTH(smp_data);
-
-//    if (move != e_move) { printf("move error %d", k); exit(1);}
-//    if (score != entry->score) { printf("score error %d", k); exit(1);}
-//    if (depth != entry->depth) { printf("depth error %d", k); exit(1);}
-//    if (flag != e_flag) { printf("flags error %d (smp_flag=%d entry_flag=%d) \n", k, flag, e_flag);
-//        printf("%s \n", Move::name(e_move).c_str());
-//        printf("%s \n", Move::name(move).c_str());
-//        exit(1);
-//    }
-//}
-#endif
-
 //========================================================
 //! \brief  Remise à zéro de la table de transposition
 //--------------------------------------------------------
@@ -171,16 +135,11 @@ void TranspositionTable::clear(void)
 //    std::memset(tt_entries, 0, sizeof(HashEntry) * tt_size);
     for (HashEntry* entry = tt_entries; entry < tt_entries + tt_size; entry++)
     {
-#ifdef TT_XOR
-        entry->smp_key = 0ULL;
-        entry->smp_data = 0ULL;
-#else
         entry->hash = 0;
         entry->date = 0;
         entry->move = 0;
         entry->score = 0;
         entry->depth = 0;
-#endif
     }
 
 //   for (int i=0; i<4; i++)
@@ -207,13 +166,6 @@ void TranspositionTable::clear_pawn_table(void)
 #endif
 
     std::memset(PawnCacheTable, 0, sizeof(PawnCacheEntry) * PAWN_CACHE_SIZE);
-
-    //    for (int i=0; i<PAWN_CACHE_SIZE; i++)
-    //    {
-    //        PawnCacheTable[i].pawn_hash = 0ULL;
-    //        PawnCacheTable[i].score     = 0;
-    //        PawnCacheTable[i].passed    = 0ULL;
-    //    }
 }
 
 //========================================================
@@ -228,11 +180,6 @@ void TranspositionTable::clear_eval_table(void)
 #endif
 
     std::memset(EvalCacheTable, 0, sizeof(U64) * EVAL_CACHE_SIZE);
-
-    //    for (int i=0; i<EVAL_CACHE_SIZE; i++)
-    //    {
-    //        EvalCacheTable[i] = 0ULL;
-    //    }
 }
 
 //========================================================
@@ -270,19 +217,6 @@ void TranspositionTable::store(U64 hash, MOVE move, int score, int flag, int dep
             break;
         }
 
-        /*  255 = 1111 1111
-         *
-         *
-         */
-
-        //        if (      ((259 + Table.generation - slots[i].generation) & TT_MASK_AGE) - slots[i].depth
-        //            >=  + ((259 + Table.generation - replace->generation) & TT_MASK_AGE) - replace->depth)
-
-        // Age is only stored in the upper 6 MSBs
-        /*
- * 11111100 = 252 TT_MASK_AGE
- *
- */
         age = ((tt_date - entry->date) & 255) * 256 + 255 - entry->depth;
         if (age > oldest)
         {
