@@ -1,6 +1,7 @@
 #include "defines.h"
 #include "Board.h"
 #include "evaluate.h"
+#include "Square.h"
 
 // Code de Vice (chap 82)
 //  >> vient de Sjeng 11.2 (draw.c) et neval.c , ligne 588

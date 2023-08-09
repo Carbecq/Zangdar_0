@@ -36,7 +36,7 @@ constexpr Score mg_value[7] = {
 };
 
 //  Bonus positionnel des pièces
-constexpr int meg_pawn_table[64] = {
+constexpr Score meg_pawn_table[64] = {
     S(   0,    0), S(   0,    0), S(   0,    0), S(   0,    0), S(   0,    0), S(   0,    0), S(   0,    0), S(   0,    0),
     S(  -7,    7), S( -12,    1), S( -15,    7), S(  -6,    3), S( -11,   11), S(  11,   10), S(  15,  -10), S(   1,  -21),
     S( -18,    2), S( -22,   -4), S( -18,   -4), S( -12,  -10), S(  -6,   -3), S(  -6,    0), S(  -1,  -14), S(  -9,  -13),
@@ -47,7 +47,7 @@ constexpr int meg_pawn_table[64] = {
     S(   0,    0), S(   0,    0), S(   0,    0), S(   0,    0), S(   0,    0), S(   0,    0), S(   0,    0), S(   0,    0),
 };
 
-constexpr int meg_knight_table[64] = {
+constexpr Score meg_knight_table[64] = {
     S( -53,  -57), S( -20,  -41), S( -24,  -27), S( -19,   -7), S( -11,   -8), S( -15,  -21), S( -21,  -23), S( -50,  -43),
     S( -33,  -19), S( -36,  -12), S( -25,  -27), S(  -9,   -6), S( -13,   -6), S( -23,  -27), S( -31,   -6), S(  -8,   -8),
     S( -31,  -31), S( -13,  -16), S( -13,    2), S(   2,   20), S(   4,   17), S(  -8,   -2), S(  -6,  -12), S( -17,  -24),
@@ -58,7 +58,7 @@ constexpr int meg_knight_table[64] = {
     S( -60,  -67), S( -10,  -10), S( -17,   -6), S(  -2,   -7), S(   2,   -1), S( -12,   -5), S( -16,  -16), S( -58,  -47),
 };
 
-constexpr int meg_bishop_table[64] = {
+constexpr Score meg_bishop_table[64] = {
     S(  17,   -5), S(   5,    2), S(   2,   -4), S(  -8,   -8), S( -10,   -3), S(   2,    1), S(  -1,    1), S(  15,   -7),
     S(  13,   -9), S(   9,  -19), S(   0,   -8), S(  -9,    1), S(  -7,    3), S(  -5,  -15), S(  14,  -15), S(  12,  -20),
     S(  -3,   -4), S(   8,    7), S(   5,   12), S(   6,   15), S(   6,   15), S(  10,    8), S(  14,   -2), S(  13,    4),
@@ -69,7 +69,7 @@ constexpr int meg_bishop_table[64] = {
     S(  -6,    4), S(   1,    0), S(  -8,    8), S(  -6,    7), S(  -4,    7), S( -17,   -1), S(  -5,    5), S(  -2,    0),
 };
 
-constexpr int meg_rook_table[64] = {
+constexpr Score meg_rook_table[64] = {
     S( -23,  -11), S( -17,  -11), S( -17,   -8), S(  -8,  -19), S( -12,  -22), S(  -9,  -14), S(  -5,  -20), S( -14,  -27),
     S( -56,  -21), S( -26,  -22), S( -20,  -16), S( -14,  -20), S( -13,  -23), S( -16,  -34), S( -15,  -28), S( -44,  -22),
     S( -34,  -17), S( -19,   -4), S( -31,   -8), S( -23,  -15), S( -25,  -16), S( -26,  -15), S(   3,  -16), S( -22,  -21),
@@ -80,7 +80,7 @@ constexpr int meg_rook_table[64] = {
     S(  29,   40), S(  23,   46), S(  22,   46), S(  19,   43), S(  33,   40), S(  18,   50), S(  23,   47), S(  20,   51),
 };
 
-constexpr int meg_queen_table[64] = {
+constexpr Score meg_queen_table[64] = {
     S( -21,  -27), S( -23,  -41), S( -16,  -52), S(  -8,  -59), S( -13,  -50), S( -27,  -48), S( -22,  -27), S( -24,  -21),
     S( -18,  -19), S(  -8,  -30), S(   4,  -64), S(   0,  -34), S(   3,  -43), S(  -8,  -63), S( -13,  -47), S( -20,  -24),
     S( -17,  -19), S(   1,  -19), S(  -9,   -4), S( -12,  -19), S(  -8,  -22), S( -13,   -2), S(   5,  -22), S(  -6,   -2),
@@ -91,7 +91,7 @@ constexpr int meg_queen_table[64] = {
     S(  -2,    5), S(  10,   12), S(  24,   15), S(  21,   33), S(  27,   35), S(  27,   27), S(  10,   10), S(  23,   21),
 };
 
-constexpr int meg_king_table[64] = {
+constexpr Score meg_king_table[64] = {
     S(  -4,  -91), S(  42,  -79), S(   9,  -49), S( -22,  -55), S(  -4,  -85), S( -45,  -44), S(  35,  -80), S(  16, -151),
     S(  38,  -49), S(  29,  -26), S(  13,   -7), S( -42,    8), S( -21,    1), S( -16,   -3), S(  30,  -36), S(  33,  -71),
     S(   0,  -33), S(  30,   -5), S(  15,   22), S(  -8,   42), S(  18,   35), S(  18,   17), S(  37,  -14), S(  -6,  -43),
@@ -122,10 +122,12 @@ constexpr Score RookMobility[15] = {
 constexpr Score QueenMobility[28] = {
     S(-62,-48), S(-70,-36), S(-66,-49), S(-45,-50), S(-27,-46), S( -9,-45), S(  2,-37), S(  9,-23),
     S( 14, -7), S( 19,  9), S( 21, 24), S( 24, 34), S( 28, 39), S( 27, 49), S( 29, 55), S( 28, 63),
-    S( 26, 69), S( 26, 69), S( 24, 73), S( 29, 72), S( 34, 74), S( 51, 63), S( 60, 69), S( 79, 66)};
+    S( 26, 69), S( 26, 69), S( 24, 73), S( 29, 72), S( 34, 74), S( 51, 63), S( 60, 69), S( 79, 66),
+    S(106, 85), S(112, 84), S(104,111), S(108,131)
+};
 
 //------------------------------------------------------------
-//  Bonus car on a le au trait
+//  Bonus car on a le trait
 constexpr int Tempo = 15;
 
 //  Pions
@@ -134,7 +136,7 @@ constexpr Score PawnPassed[8] = {
 };
 constexpr Score PawnDoubled  = S(-14,-25);
 constexpr Score PawnIsolated = S(-15,-18);
-constexpr int   PawnSupport  = S( 13,  5);
+constexpr Score PawnSupport  = S( 13,  5);
 
 //  Colonnes Ouvertes
 constexpr Score RookOpenFile      = S( 28, 10);
@@ -144,9 +146,24 @@ constexpr Score QueenSemiOpenFile = S(  1,  5);
 
 //  Imbalances
 constexpr Score BishopPair = S( 26, 100);
+constexpr Score KnightOutpost[2] = {S(20, 10), S(40, 20)};
 
-//  Sécurité
-constexpr Score KingLineDanger = S(-12, 4);
+//  Sécurité du Roi
+constexpr Score AttackPower[7]   = { 0, 0,  35, 20, 40, 80, 0 };
+constexpr Score CheckPower[7]    = { 0, 0, 100, 35, 65, 65, 0 };
+constexpr Score CountModifier[8] = { 0, 0, 50, 75, 80, 88, 95, 100 };
+
+constexpr Score KingLineDanger[28] = {
+    S(  0,  0), S( -5, -2), S(-17,-22), S(-18, -8),
+    S(-36,-12), S(-41,-23), S(-39,-25), S(-40,-21),
+    S(-43,-19), S(-52,-18), S(-46,-21), S(-54,-14),
+    S(-57,-15), S(-60,-13), S(-66,-14), S(-68,-12),
+    S(-72,-15), S(-76,-20), S(-81,-24), S(-88,-32),
+    S(-95,-34), S(-101,-43), S(-109,-52), S(-115,-65),
+    S(-121,-64), S(-126,-59), S(-130,-53), S(-135,-55),
+};
+
+
 
 
 #endif // EVALUATE_H

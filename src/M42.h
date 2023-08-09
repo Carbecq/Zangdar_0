@@ -38,9 +38,9 @@ namespace M42 {
   extern uint64_t * BAttacks[64];
   extern uint64_t BMasks[64];
 
-  const uint64_t FileAMask = 0x0101010101010101ULL;
-  const uint64_t FileHMask = 0x8080808080808080ULL;
-  const unsigned RShift[64] = {
+  constexpr uint64_t FileAMask = 0x0101010101010101ULL;
+  constexpr uint64_t FileHMask = 0x8080808080808080ULL;
+  constexpr unsigned RShift[64] = {
     52, 53, 53, 53, 53, 53, 53, 52,
     53, 54, 54, 53, 54, 54, 54, 53,
     53, 54, 54, 54, 54, 54, 54, 53,
@@ -52,7 +52,7 @@ namespace M42 {
   };
 
   // Very dense and high quality magics taken from Texel
-  const uint64_t RMagics[64] = {
+  constexpr uint64_t RMagics[64] = {
     0x19A80065FF2BFFFFULL, 0x3FD80075FFEBFFFFULL, 0x4010000DF6F6FFFEULL,
     0x0050001FAFFAFFFFULL, 0x0050028004FFFFB0ULL, 0x7F600280089FFFF1ULL,
     0x7F5000B0029FFFFCULL, 0x5B58004848A7FFFAULL, 0x002A90005547FFFFULL,
@@ -77,7 +77,7 @@ namespace M42 {
     0x0001FFFF23FF605EULL
   };
 
-  const unsigned BShift[64] = {
+  constexpr unsigned BShift[64] = {
     59, 60, 59, 59, 59, 59, 60, 59,
     60, 60, 59, 59, 59, 59, 60, 60,
     60, 60, 57, 57, 57, 57, 60, 60,
@@ -87,7 +87,7 @@ namespace M42 {
     60, 60, 59, 59, 59, 59, 60, 60,
     59, 60, 59, 59, 59, 59, 60, 59,
   };
-  const uint64_t BMagics[64] = {
+  constexpr uint64_t BMagics[64] = {
     0x0006EFF5367FF600ULL, 0x00345835BA77FF2BULL, 0x00145F68A3F5DAB6ULL,
     0x003A1863FB56F21DULL, 0x0012EB6BFE9D93CDULL, 0x000D82827F3420D6ULL,
     0x00074BCD9C7FEC97ULL, 0x000034FE99F9FFFFULL, 0x0000746F8D6717F6ULL,
@@ -115,7 +115,7 @@ namespace M42 {
 
   inline uint64_t rank_attacks(int sq, uint64_t occ)
   {
-    static const uint64_t OuterSquares[64] = {
+    static constexpr uint64_t OuterSquares[64] = {
       0x0000000000000081ULL, 0x0000000000000081ULL, 0x0000000000000081ULL,
       0x0000000000000081ULL, 0x0000000000000081ULL, 0x0000000000000081ULL,
       0x0000000000000081ULL, 0x0000000000000001ULL, 0x0000000000008000ULL,
@@ -146,7 +146,7 @@ namespace M42 {
 
   inline uint64_t file_attacks(int sq, uint64_t occ)
   {
-    static const uint64_t OuterSquares[64] = {
+    static constexpr uint64_t OuterSquares[64] = {
       0x0100000000000000ULL, 0x0200000000000000ULL, 0x0400000000000000ULL,
       0x0800000000000000ULL, 0x1000000000000000ULL, 0x2000000000000000ULL,
       0x4000000000000000ULL, 0x8000000000000000ULL, 0x0100000000000001ULL,

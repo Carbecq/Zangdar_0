@@ -47,24 +47,33 @@ template<bool Mode>
     //    printf("egw=%d egb=%d \n", get_eg_value(scores[WHITE]), get_eg_value(scores[BLACK]));
 
 
-    int mgPhase = gamePhase;
+    int phase_256 = std::max(0, 24 - gamePhase);
+//    if (phase_256 < 0.0)
+//        phase_256 = 0.0; // in case of early promotion
 
-    if (mgPhase > 24)
-        mgPhase = 24; // in case of early promotion
-    int egPhase = 24 - mgPhase;
+    phase_256 = (phase_256 * 256 + 12) / 24;
+    int eval_256  = (mgScore * (256 - phase_256) + egScore * phase_256) / 256;
 
-    int score = (mgScore * mgPhase + egScore * egPhase) / 24;
+//    int phase_24 = std::min(24, gamePhase);
+//    if (phase_24 > 24.0)
+//        phase_24 = 24.0; // in case of early promotion
+
+//    int eval_24 = (mgScore * phase_24 + egScore * (24 - phase_24)) / 24;
+
+    // eval_24 et eval_256 sont égaux à +- 1
+    // mais eval_24 donne une évaluation plus rapidement
+
+//    if (eval_24 != eval_256)
+//   printf("phase = %f %f : eval = %f %f \n", phase_24, phase_256, eval_24, eval_256);
 
     // Mise en cache de l'évaluation
-    Transtable.store_evaluation(hash, score);
+    Transtable.store_evaluation(hash, eval_256);
 
     //     printf("side=%d : mgp = %d ; egp = %d : s = %d \n", side_to_move, mgPhase, egPhase, score);
 
     // return score relative to the side to move
-    //    return (side_to_move == WHITE ? score : -score) + Tempo;
-    return (side_to_move == WHITE ? score : -score);
+    return (side_to_move == WHITE ? eval_256 : -eval_256) + Tempo;
 }
-
 
 template int Board::evaluate<true>();
 template int Board::evaluate<false>();

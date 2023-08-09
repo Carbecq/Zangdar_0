@@ -5,9 +5,9 @@
 #include "Timer.h"
 #include "TranspositionTable.h"
 #include <iostream>
+#include "Move.h"
 
-extern ThreadPool threadPool;
-
+#define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
 //======================================================
 //! \brief  Lancement d'une recherche
@@ -27,103 +27,124 @@ void Search::think(int threadID)
 
     ThreadData* td = &threadPool.threads[threadID];
 
-    my_timer.start();
-    my_timer.setup(C);
-
-    int max_depth = my_timer.getSearchDepth();
-    int score     = 0;
-    int alpha     = -INFINITE;
-    int beta      = INFINITE;
-    int delta     = 0;
-    int sdepth;
-
-    bool do_NULL  = true;
-    PVariation pv;
-    pv.length = 0;
-
-    int  ply = 0;
+    timer.start();
+    timer.setup(C);
 
     // iterative deepening
-    for (int depth = 1; depth <= max_depth; ++depth)
-    {
-        //---------------------------------------------------------------------
-        //  ASPIRATION WINDOW
-        //---------------------------------------------------------------------
-        if (depth >= 6)
-        {
-            alpha = std::max(td->best_score - ASPIRATION_WINDOW, -INFINITE);
-            beta  = std::min(td->best_score + ASPIRATION_WINDOW, INFINITE);
-            delta = ASPIRATION_WINDOW;
-            sdepth = depth;
-
-            while (true)
-            {
-                score = alpha_beta<C>(my_board, ply, alpha, beta, std::max(1, sdepth), do_NULL, pv, td);
-
-                if (stopped)
-                    break;
-
-                if (score <= alpha) // Fail Low
-                {
-                    beta  = (alpha + beta) / 2;
-                    alpha = std::max(score - delta, -INFINITE); // alpha/score-delta
-                    sdepth = depth;
-                }
-                else if(score >= beta)  // Fail High
-                {
-                    beta  = std::min(score + delta, INFINITE);   // beta/score+delta
-                    // idée de Berserk
-                    if (abs(score) < TBWIN_IN_X)
-                        sdepth--;
-                }
-                else
-                {
-                    break;
-                }
-
-                delta += delta/4;
-            }
-        }
-        else
-        {
-            score = alpha_beta<C>(my_board, ply, -INFINITE, INFINITE, depth, do_NULL, pv, td);
-        }
-
-        if (stopped)
-            break;
-
-        // L'itération s'est terminée sans problème
-        // On peut mettre à jour les infos UCI
-        if (threadID == 0)
-        {
-            td->best_depth = depth;
-            td->best_move  = pv.line[0];
-            td->best_score = score;
-        }
-
-        U64 elapsed     = 0; // durée en millisecondes
-        bool shouldStop = my_timer.finishOnThisDepth(elapsed);
-
-        if (logUci && threadID == 0)
-            show_uci_result(td, elapsed, pv);
-
-        // est-ce qu'on a le temps pour une nouvelle itération ?
-        if (shouldStop == true)
-            break;
-    }
+    iterative_deepening<C>(td);
 
     if (threadID == 0)
     {
         if (logUci)
         {
             show_uci_best(td);
-            my_timer.show_time();
+            timer.show_time();
         }
 
         threadPool.main_thread_stopped(); // arrêt des autres threads
         threadPool.wait(1);               // attente de ces threads
     }
-    //  Transtable.stats();
+}
+
+//======================================================
+//! \brief  iterative deepening
+//!
+//! alpha-beta
+//!
+//------------------------------------------------------
+template<Color C>
+void Search::iterative_deepening(ThreadData* td)
+{
+    PVariation pv;
+    pv.length = 0;
+    int  ply = 0;
+
+    for (td->depth = 1; td->depth <= timer.getSearchDepth(); td->depth++)
+    {
+        // Search position, using aspiration windows for higher depths
+        td->score = aspiration_window<C>(ply, pv, td);
+
+        if (stopped)
+            break;
+
+        // L'itération s'est terminée sans problème
+        // On peut mettre à jour les infos UCI
+        if (td->index == 0)
+        {
+            td->best_depth = td->depth;
+            td->best_move  = pv.line[0];
+            td->best_score = td->score;
+        }
+
+        U64 elapsed     = 0; // durée en millisecondes
+        bool shouldStop = timer.finishOnThisDepth(elapsed);
+
+        if (logUci && td->index == 0)
+            show_uci_result(td, elapsed, pv);
+
+        // est-ce qu'on a le temps pour une nouvelle itération ?
+        if (shouldStop == true)
+            break;
+
+        td->seldepth = 0;
+    }
+}
+
+//======================================================
+//! \brief  Aspiration Window
+//!
+//!
+//------------------------------------------------------
+template<Color C>
+int Search::aspiration_window(int ply, PVariation& pv, ThreadData* td)
+{
+    int alpha  = -INFINITE;
+    int beta   = INFINITE;
+    int depth  = td->depth;
+    int score  = td->score;
+
+    const int initialWindow = 12;
+    int delta = 16;
+
+    // After a few depths use a previous result to form the window
+    if (depth >= 6)
+    {
+        alpha = std::max(score - initialWindow, -INFINITE);
+        beta  = std::min(score + initialWindow, INFINITE);
+    }
+
+    while (true)
+    {
+        score = alpha_beta<C>(ply, alpha, beta, std::max(1, depth), pv, td);
+
+        if (stopped)
+            break;
+
+        // Search failed low, adjust window and reset depth
+        if (score <= alpha)
+        {
+            alpha = std::max(score - delta, -INFINITE); // alpha/score-delta
+            beta  = (alpha + beta) / 2;
+            depth = td->depth;
+        }
+
+        // Search failed high, adjust window and reduce depth
+        else if(score >= beta)  // Fail High
+        {
+            beta  = std::min(score + delta, INFINITE);   // beta/score+delta
+            // idée de Berserk
+            if (abs(score) < TBWIN_IN_X)
+                depth--;
+        }
+
+        // Score within the bounds is accepted as correct
+        else
+            return score;
+
+        delta += delta*2 / 3;
+    }
+
+    return score;
 }
 
 //=====================================================
@@ -141,12 +162,15 @@ void Search::think(int threadID)
 //! \return Valeur du score
 //-----------------------------------------------------
 template<Color C>
-int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bool do_NULL, PVariation& pv, ThreadData* td)
+int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, ThreadData* td)
 {
     assert(board.valid<C>());
     assert(beta > alpha);
 
+    // Update node count and selective depth
     td->nodes++;
+    if (ply > td->seldepth)
+        td->seldepth = ply;
 
     PVariation new_pv;
     new_pv.length = 0;
@@ -157,7 +181,7 @@ int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bo
         return board.evaluate<true>();
 
     // On a atteint la limite de taille de la partie ?
-    if (board.game_clock >= MAX_HIST - 1)
+    if (board.gamemove_counter >= MAX_HIST - 1)
         return board.evaluate<true>();
 
     //  Time-out
@@ -185,13 +209,13 @@ int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bo
     if (depth <= 0)
     {
         td->nodes--;
-        return (quiescence<C>(board, ply, alpha, beta, td));
+        return (quiescence<C>(ply, alpha, beta, td));
     }
 
     if (!isRoot)
     {
         //  Position nulle ?
-        if (board.is_draw<C>())
+        if (board.is_draw(ply))
             return CONTEMPT;
 
         // Mate distance pruning
@@ -207,19 +231,14 @@ int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bo
     int  tt_flag;
     int  tt_depth;
     bool tt_hit   = Transtable.probe(board.hash, ply, tt_move, tt_score, tt_flag, tt_depth);
-    bool tt_tactical = false;
 
     if (tt_hit)
     {
-        tt_tactical = Move::is_tactical(tt_move);
-        if (tt_depth >= depth && (depth == 0 || !isPVNode))
+        // Trust TT if not a pvnode and the entry depth is sufficiently high
+        if (    tt_depth >= depth && !isPVNode
+            && (tt_score >= beta ? tt_flag & BOUND_LOWER : tt_flag & BOUND_UPPER))
         {
-            if (    tt_flag == HASH_EXACT
-                || (tt_flag == HASH_BETA  && tt_score >= beta)  // lower
-                || (tt_flag == HASH_ALPHA && tt_score <= alpha)) // upper
-            {
-                return tt_score;
-            }
+            return tt_score;
         }
     }
 
@@ -227,29 +246,24 @@ int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bo
     int tbScore, tbBound;
     if (UseSyzygy && board.probe_wdl(tbScore, tbBound, ply) == true)
     {
-        //   thread->tbhits++;
-
-        // Check to see if the WDL value would cause a cutoff
-        if (    tbBound == HASH_EXACT
-            || (tbBound == HASH_BETA && tbScore >= beta)    // lower
-            || (tbBound == HASH_ALPHA && tbScore <= alpha)) // upper
+        if (tbBound == BOUND_EXACT || (tbBound == BOUND_LOWER ? tbScore >= beta : tbScore <= alpha))
         {
-            Transtable.store(board.hash, Move::MOVE_NONE, tbScore, tbBound, depth, ply);
+            Transtable.store(board.hash, Move::MOVE_NONE, tbScore, tbBound, depth, MAX_PLY);
             return tbScore;
         }
+
 
         // Limit the score of this node based on the tb result
         if (isPVNode)
         {
             // Never score something worse than the known Syzygy value
-            if (tbBound == HASH_BETA /*BOUND_LOWER*/)
+            if (tbBound == BOUND_LOWER)
             {
                 best_score = tbScore;
                 alpha = std::max(alpha, tbScore);
             }
-
+            else
             // Never score something better than the known Syzygy value
-            if (tbBound == HASH_ALPHA)
             {
                 max_score = tbScore;
             }
@@ -262,31 +276,31 @@ int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bo
 
     if (inCheck)
     {
-        static_eval = NOSCORE;
+        static_eval = -MATE + ply;
     }
     else
     {
         static_eval = board.evaluate<true>();
-        statEval[ply] = static_eval;
     }
+    eval_history [ply] = static_eval;
 
     /*  Avons-nous amélioré la position ?
         Si on ne s'est pas amélioré dans cette ligne, on va pouvoir couper un peu plus */
     bool improving = false;
     if (ply > 2)
-        improving = !inCheck && (static_eval > statEval[ply - 2]);
+        improving = !inCheck && (static_eval > eval_history[ply - 2]);
 
-    //  Controle si on va pouvoir utiliser des techniques de coupe pre-move
     int  score;
 
-    if (!inCheck && !isRoot)
+    if (!inCheck && !isRoot && !isPVNode)
     {
         //---------------------------------------------------------------------
         //  RAZORING
         //---------------------------------------------------------------------
-        if (!isPVNode && depth <= 3 && (static_eval + 200 * depth) <= alpha)
+        if (   depth <= 3
+            && (static_eval + 200 * depth) <= alpha)
         {
-            score = quiescence<C>(board, ply, alpha, beta, td);
+            score = quiescence<C>(ply, alpha, beta, td);
             if (score <= alpha)
             {
                 td->nodes--;
@@ -297,63 +311,53 @@ int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bo
         //---------------------------------------------------------------------
         //  STATIC NULL MOVE PRUNING ou aussi REVERSE FUTILITY PRUNING
         //---------------------------------------------------------------------
-        if (   !isPVNode
-            && depth <= 6
+        if (
+            depth <= 6
             && abs(beta) < MATE_IN_X
             && board.getNonPawnMaterial<C>())
         {
             int eval_margin = 70 * depth;
 
             if (static_eval - eval_margin >= beta)
-            {
                 return static_eval - eval_margin; // Fail Soft
-            }
         }
 
         //---------------------------------------------------------------------
         //  NULL MOVE PRUNING
         //---------------------------------------------------------------------
-        if (   do_NULL
-            && ply
+        if (
+            depth >= 3
             && static_eval >= beta
-            && depth > NULL_MOVE_R + 1      //TODO : Vice ajoute un test sur ply
-            && board.major_pieces<C>() > 0) //TODO voir le test sur les pièces
+            && board.non_pawn_count<C>() > 0
+            && board.game_history[board.gamemove_counter-1].move != Move::MOVE_NONE)
         {
-            int R = NULL_MOVE_R;
-            if (depth > 6)
-                R++;
+            int R = 3 + depth / 5 + std::min(3, (static_eval - beta)/256);
 
             board.make_nullmove<C>();
-            score = -alpha_beta<~C>(board, ply + 1, -beta, -beta + 1, depth - 1 - R, false, new_pv, td);
+            score = -alpha_beta<~C>(ply + 1, -beta, -beta + 1, depth - 1 - R, new_pv, td);
             board.undo_nullmove<C>();
 
             if (stopped)
                 return 0;
 
-            // (Stockfish) : on ne retourne pas un score proche du mat
-            //               car ce score ne serait pas prouvé
+            // Cutoff
             if (score >= beta)
             {
-                if (score > TBWIN_IN_X)
-                    score = beta;
-                return score;
+                // (Stockfish) : on ne retourne pas un score proche du mat
+                //               car ce score ne serait pas prouvé
+                return(score >= TBWIN_IN_X ? beta : score);
             }
         }
-
     } // end Pruning
 
     //---------------------------------------------------------------------
     // Internal Iterative Deepening.
     //---------------------------------------------------------------------
-    if (    isPVNode
-        &&  tt_move == Move::MOVE_NONE
-        &&  depth >= 3)
+    if (
+        tt_move == Move::MOVE_NONE
+        &&  depth >= 4)
     {
-        alpha_beta<C>(board, ply, -beta, -alpha, depth - 2, true, new_pv, td);
-
-        // Probe for the newly found move, and update ttMove / ttTactical
-        if (Transtable.probe(board.hash, ply, tt_move, tt_score, tt_flag, tt_depth))
-            tt_tactical = Move::is_tactical(tt_move);
+        depth--;
     }
 
     //====================================================================================
@@ -364,20 +368,18 @@ int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bo
 
     MovePicker movePicker(ply, tt_move, &my_orderingInfo, &board, &move_list);
 
-    int  played     = 0;
     MOVE move;
     const int old_alpha = alpha;
-    int quiets = 0;
+    int moveCount = 0, quietCount = 0;
 
     // Boucle sur tous les coups
     while (movePicker.hasNext())
     {
         move = movePicker.getNext();
-
         bool isQuiet = !Move::is_tactical(move);
 
-        // Affichage du coup courant
 #ifdef ACC
+        // Affichage du coup courant
         if (ply==0 && isPVNode && !td->index && my_timer.elapsedTime() > CurrmoveTimerMS)
             show_uci_current(move, legalMoves, depth);
 #endif
@@ -388,7 +390,8 @@ int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bo
 #ifdef LMP
         if (   !isPVNode
             && !inCheck
-            && quiets > (3 + 2 * depth * depth) / (2 - improving) )
+            && best_score > -TBWIN_IN_X
+            && moveCount > (3 + 2 * depth * depth) / (2 - improving) )
             continue;
 #endif
 
@@ -396,42 +399,44 @@ int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bo
         board.make_move<C>(move);
 
         // Update counter of moves actually played
-        played++;
-        quiets += isQuiet;
+        moveCount++;
+        quietCount += isQuiet;
 
         //------------------------------------------------------------------------------------
         //  LATE MOVE REDUCTION
         //------------------------------------------------------------------------------------
-        int R;
-        if (    played >= 4
-            &&  depth >= 3
+        int newDepth = depth - 1 ;
+        bool doFullDepthSearch;
+
+        if (   depth > 2
+            && moveCount > (2 + isPVNode)
             && !inCheck
-            &&  isQuiet
-            )
+            && isQuiet)
         {
-            R = 2;
-            R -= isRoot;
-            R += (played - 4) / 8;
-            R += 2*!isPVNode;
-            R += tt_tactical && best_move == tt_move;
+            // Base reduction
+            int R = Reductions[isQuiet][std::min(31, depth)][std::min(31, moveCount)];
+            // Reduce less in pv nodes
+            R -= isPVNode;
+            // Reduce less when improving
+            R -= improving;
 
-            R = R >= 1 ? R : 1;
-        }
-        else
-        {
-            R = 1;
-        }
+            // Depth after reductions, avoiding going straight to quiescence
+            int lmrDepth = CLAMP(newDepth - R, 1, newDepth - 1);
 
-        // Search the move with a possibly reduced depth, on a full or null window
-        score =  (played == 1 || !isPVNode)
-                    ? -alpha_beta<~C>(board, ply + 1, -beta, -alpha, depth-R, true, new_pv, td)
-                    : -alpha_beta<~C>(board, ply + 1, -alpha-1, -alpha, depth-R, true, new_pv, td);
+            // Search this move with reduced depth:
+            score = -alpha_beta<~C>(ply+1, -alpha-1, -alpha, lmrDepth, new_pv, td);
 
-        // If the search beat alpha, we may need to research, in the event that
-        // the previous search was not the full window, or was a reduced depth
-        score =  (score > alpha && (R != 1 || (played != 1 && isPVNode)))
-                    ? -alpha_beta<~C>(board, ply + 1, -beta, -alpha, depth-1, true, new_pv, td)
-                    :  score;
+            doFullDepthSearch = score > alpha && lmrDepth < newDepth;
+        } else
+            doFullDepthSearch = !isPVNode || moveCount > 1;
+
+        // Full depth zero-window search
+        if (doFullDepthSearch)
+            score = -alpha_beta<~C>(ply+1, -alpha-1, -alpha, newDepth, new_pv, td);
+
+        // Full depth alpha-beta window search
+        if (isPVNode && ((score > alpha && score < beta) || moveCount == 1))
+            score = -alpha_beta<~C>(ply+1, -beta, -alpha, newDepth, new_pv, td);
 
 
         // retract current move
@@ -468,10 +473,9 @@ int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bo
                     if (isQuiet)
                     {
                         my_orderingInfo.updateKillers(ply, move);
-                        //TODO update history ?
                     }
 
-                    Transtable.store(board.hash, move, score, HASH_BETA, depth, ply);
+                    Transtable.store(board.hash, move, score, BOUND_LOWER, depth, ply);
                     return score;
                 }
 
@@ -481,7 +485,7 @@ int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bo
     }         // boucle sur les coups
 
     // est-on mat ou pat ?
-    if (played == 0)
+    if (moveCount == 0)
     {
         // On est en échec, et on n'a aucun coup : on est MAT
         // On n'est pas en échec, et on n'a aucun coup : on est PAT
@@ -497,7 +501,7 @@ int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bo
         //  et de plus : score < beta
         //  si score >  alpha    : c'est un bon coup : HASH_EXACT
         //  si score <= alpha    : c'est un coup qui n'améliore pas alpha : HASH_ALPHA
-        int flag = (alpha != old_alpha) ? HASH_EXACT : HASH_ALPHA;
+        int flag = (alpha != old_alpha) ? BOUND_EXACT : BOUND_UPPER;
         Transtable.store(board.hash, best_move, best_score, flag, depth, ply);
     }
 
@@ -507,5 +511,11 @@ int Search::alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bo
 template void Search::think<WHITE>(int id);
 template void Search::think<BLACK>(int id);
 
-template int Search::alpha_beta<WHITE>(Board &board, int ply, int alpha, int beta, int depth, bool do_NULL, PVariation& pv, ThreadData* td);
-template int Search::alpha_beta<BLACK>(Board &board, int ply, int alpha, int beta, int depth, bool do_NULL, PVariation& pv, ThreadData* td);
+template void Search::iterative_deepening<WHITE>(ThreadData* td);
+template void Search::iterative_deepening<BLACK>(ThreadData* td);
+
+template int Search::aspiration_window<WHITE>(int ply, PVariation& pv, ThreadData* td);
+template int Search::aspiration_window<BLACK>(int ply, PVariation& pv, ThreadData* td);
+
+template int Search::alpha_beta<WHITE>(int ply, int alpha, int beta, int depth, PVariation& pv, ThreadData* td);
+template int Search::alpha_beta<BLACK>(int ply, int alpha, int beta, int depth, PVariation& pv, ThreadData* td);

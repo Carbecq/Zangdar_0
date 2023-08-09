@@ -1,6 +1,7 @@
 #include "Board.h"
 #include "bitmask.h"
 #include "MoveGen.h"
+#include "Square.h"
 
 // isolated pawn masks [square]
 Bitboard AdjacentFilesMask64[64] = {0};

@@ -2,6 +2,7 @@
 #include "Board.h"
 #include "defines.h"
 #include <cassert>
+#include "Move.h"
 
 template <Color C> [[nodiscard]] std::uint64_t Board::perft(const int depth) noexcept
 {

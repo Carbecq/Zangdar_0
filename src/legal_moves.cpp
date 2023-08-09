@@ -1,6 +1,7 @@
 #include "Board.h"
 #include "Board.h"
 #include "MoveGen.h"
+#include "Move.h"
 
 constexpr int PUSH[] = {8, -8};
 

@@ -4,6 +4,7 @@
 #include <string>
 #include <iomanip>
 #include "Board.h"
+#include "Square.h"
 
 //    rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
 //                                                1 2    3 4 5
@@ -11,8 +12,8 @@
 //      1) w       white to move
 //      2) KQkq    roques possibles, ou '-'
 //      3) -       case en passant
-//      4) 0       demi-coups pour la règle des 50 coups   : halfmove_clock
-//      5) 1       nombre de coups de la partie            : fullmove_clock
+//      4) 0       demi-coups pour la règle des 50 coups   : halfmove_counter
+//      5) 1       nombre de coups de la partie            : fullmove_counter
 
 // The halfmove clock specifies a decimal number of half moves with respect to the 50 move draw rule.
 // It is reset to zero after a capture or a pawn move and incremented otherwise.
@@ -275,11 +276,16 @@ void Board::set_fen(const std::string &fen, bool logTactics) noexcept
     else
     {
         // Halfmove clock
-        ss >> halfmove_clock;
+        // The halfmove clock specifies a decimal number of half moves with respect to the 50 move draw rule.
+        // It is reset to zero after a capture or a pawn move and incremented otherwise.
+        ss >> halfmove_counter;
 
         // Fullmove clock
-        ss >> fullmove_clock;
-        game_clock = 2*fullmove_clock;
+        // The number of the full moves in a game. It starts at 1, and is incremented after each Black's move.
+        ss >> fullmove_counter;
+
+        // Move count: ignore and use zero, as we count since root
+        gamemove_counter = 0;       // numMoves (Ethereal)
     }
 
 //-----------------------------------------
@@ -513,11 +519,16 @@ void Board::mirror_fen(const std::string& fen, bool logTactics)
     else
     {
         // Halfmove clock
-        ss >> halfmove_clock;
+        // The halfmove clock specifies a decimal number of half moves with respect to the 50 move draw rule.
+        // It is reset to zero after a capture or a pawn move and incremented otherwise.
+        ss >> halfmove_counter;
 
         // Fullmove clock
-        ss >> fullmove_clock;
-        game_clock = 2*fullmove_clock;
+        // The number of the full moves in a game. It starts at 1, and is incremented after each Black's move.
+        ss >> fullmove_counter;
+
+        // Move count: ignore and use zero, as we count since root
+        gamemove_counter = 0;       // numMoves (Ethereal)
     }
 
 //-----------------------------------------
@@ -606,12 +617,12 @@ void Board::mirror_fen(const std::string& fen, bool logTactics)
     //------------------------------------------------------- half-move
 
     fen += " ";
-    fen += std::to_string(get_halfmove_clock());
+    fen += std::to_string(get_halfmove_counter());
 
     //------------------------------------------------------- full-move
 
     fen += " ";
-    fen += std::to_string(get_fullmove_clock());
+    fen += std::to_string(get_fullmove_counter());
 
     return fen;
 }
@@ -653,6 +664,13 @@ void Board::parse_position(std::istringstream &is)
             apply_token<WHITE>(token);
         else
             apply_token<BLACK>(token);
+
+        // Reset move history whenever we reset the fifty move rule. This way
+        // we can track all positions that are candidates for repetitions, and
+        // are still able to use a fixed size for the history array (512)
+        if (halfmove_counter == 0)
+            gamemove_counter = 0;
+
     }
 
 }

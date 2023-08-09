@@ -20,6 +20,9 @@ struct ThreadData {
     MOVE        best_move;
     int         best_score;
     int         best_depth;
+    int         score;
+    int         depth;
+    int         seldepth;
     U64         nodes;
 
 }__attribute__((aligned(64)));
@@ -56,15 +59,17 @@ public:
 
 private:
     bool    stopped;
-    Board   my_board;
-    Timer   my_timer;
+    Board   board;
+    Timer   timer;
     bool    logUci;
     OrderingInfo my_orderingInfo;
 
-    std::array<int, MAX_PLY> statEval;
+    std::array<int, MAX_PLY> eval_history;
 
-    template <Color C> int alpha_beta(Board &board, int ply, int alpha, int beta, int depth, bool do_NULL, PVariation& pv, ThreadData* td);
-    template <Color C> int quiescence(Board &board, int ply, int alpha, int beta, ThreadData* td);
+    template <Color C> void iterative_deepening(ThreadData* td);
+    template <Color C> int aspiration_window(int ply, PVariation& pv, ThreadData* td);
+    template <Color C> int alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, ThreadData* td);
+    template <Color C> int quiescence(int ply, int alpha, int beta, ThreadData* td);
 
     void show_uci_result(const ThreadData *td, U64 elapsed, PVariation &pv) const;
     void show_uci_best(const ThreadData *td) const;
@@ -77,6 +82,7 @@ private:
     static constexpr int NULL_MOVE_R = 2;    // réduction de la profondeur de recherche
     static constexpr int CurrmoveTimerMS = 2500;
 
+    int Reductions[2][32][32];
 
 };
 

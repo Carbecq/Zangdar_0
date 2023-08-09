@@ -1,4 +1,5 @@
 #include "Board.h"
+#include "Move.h"
 
 //=================================================================
 //! \brief  Ajoute un coup tranquille à la liste des coups

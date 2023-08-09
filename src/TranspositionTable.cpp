@@ -95,6 +95,7 @@ void TranspositionTable::set_size(int mbsize)
     clear_pawn_table();
     clear_eval_table();
 
+
 #ifdef DEBUG_LOG
     sprintf(message, "TranspositionTable init complete with %d entries of %lu bytes for a total of %lu bytes (%lu MB) \n",
             tt_size, sizeof(HashEntry), tt_size*sizeof(HashEntry), tt_size*sizeof(HashEntry)/1024/1024);
@@ -119,6 +120,34 @@ void TranspositionTable::resize(int mbsize)
     set_size(mbsize);
 }
 
+#ifdef TT_XOR
+//void VerifyEntrySMP(int k, HashEntry *entry)
+//{
+//    int e_flag = Move::flag(entry->move);
+//    int e_move = Move::move(entry->move);
+
+//    U64 smp_data = FOLD_DATA(entry->score, entry->depth, e_flag, e_move);
+//    U64 smp_key  = entry->hash ^ smp_data;
+
+//    if (smp_data != entry->smp_data) { printf("data error %d", k); exit(1);}
+//    if (smp_key != entry->smp_key) { printf("smp_key error %d", k); exit(1);}
+
+//    int move = EXTRACT_MOVE(smp_data);
+//    int flag = EXTRACT_FLAGS(smp_data);
+//    int score = EXTRACT_SCORE(smp_data);
+//    int depth = EXTRACT_DEPTH(smp_data);
+
+//    if (move != e_move) { printf("move error %d", k); exit(1);}
+//    if (score != entry->score) { printf("score error %d", k); exit(1);}
+//    if (depth != entry->depth) { printf("depth error %d", k); exit(1);}
+//    if (flag != e_flag) { printf("flags error %d (smp_flag=%d entry_flag=%d) \n", k, flag, e_flag);
+//        printf("%s \n", Move::name(e_move).c_str());
+//        printf("%s \n", Move::name(move).c_str());
+//        exit(1);
+//    }
+//}
+#endif
+
 //========================================================
 //! \brief  Remise à zéro de la table de transposition
 //--------------------------------------------------------
@@ -132,26 +161,20 @@ void TranspositionTable::clear(void)
 
      tt_date = 0;
 
-//    std::memset(tt_entries, 0, sizeof(HashEntry) * tt_size);
     for (HashEntry* entry = tt_entries; entry < tt_entries + tt_size; entry++)
     {
+#ifdef TT_XOR
+        entry->smp_key = 0ULL;
+        entry->smp_data = 0ULL;
+#else
         entry->hash = 0;
         entry->date = 0;
         entry->move = 0;
         entry->score = 0;
         entry->depth = 0;
+#endif
     }
 
-//   for (int i=0; i<4; i++)
-//    {
-//        nbr_probe[i] = 0;
-//        nbr_store[i] = 0;
-//    }
-
-
-//    pcachehit=0;
-//    pcachenohit=0;
-//    pcachestore=0;
 }
 
 //========================================================
@@ -166,6 +189,7 @@ void TranspositionTable::clear_pawn_table(void)
 #endif
 
     std::memset(PawnCacheTable, 0, sizeof(PawnCacheEntry) * PAWN_CACHE_SIZE);
+
 }
 
 //========================================================
@@ -180,6 +204,7 @@ void TranspositionTable::clear_eval_table(void)
 #endif
 
     std::memset(EvalCacheTable, 0, sizeof(U64) * EVAL_CACHE_SIZE);
+
 }
 
 //========================================================
@@ -198,7 +223,6 @@ void TranspositionTable::store(U64 hash, MOVE move, int score, int flag, int dep
 {
     HashEntry *entry=nullptr, *replace=nullptr;
     int oldest, age;
-    //         int k=0;
 
     score = ScoreToTT(score, ply);
 
@@ -213,7 +237,6 @@ void TranspositionTable::store(U64 hash, MOVE move, int score, int flag, int dep
             if (!move)
                 move = Move::get_move(entry->move);
             replace = entry;
-            //     k = i;
             break;
         }
 
@@ -221,14 +244,11 @@ void TranspositionTable::store(U64 hash, MOVE move, int score, int flag, int dep
         if (age > oldest)
         {
             oldest  = age;
-
             replace = entry;
-            //          k = i;
         }
         entry++;
     }
 
-    //  nbr_store[k]++;
 
     replace->hash  = hash;
     replace->date  = tt_date;
@@ -251,7 +271,7 @@ bool TranspositionTable::probe(U64 hash, int ply, MOVE& move, int& score, int &f
 {
     move  = Move::MOVE_NONE;
     score = NOSCORE;
-    flag  = HASH_NONE;
+    flag  = BOUND_NONE;
 
     HashEntry* entry = tt_entries + (hash & tt_mask);
 
@@ -266,7 +286,6 @@ bool TranspositionTable::probe(U64 hash, int ply, MOVE& move, int& score, int &f
             depth = entry->depth;
             score = ScoreFromTT(entry->score, ply);
 
-            //        hit++;
             return true;
         }
         entry++;
@@ -323,11 +342,8 @@ bool TranspositionTable::probe_pawn_cache(U64 hash, Score &score)
     if (entry->pawn_hash == hash)
     {
         score = entry->score;
- //       pcachehit++;
         return true;
     }
-//    if (entry->pawn_hash != 0)
-//        pcachenohit++;
     return false;
 }
 
@@ -343,9 +359,6 @@ void TranspositionTable::store_pawn_cache(U64 hash, Score score)
 
     entry->pawn_hash = hash;
     entry->score     = score;
- //   pcachestore++;
-
- //   *entry = (PawnEntry) {hash, passed, score};
 }
 
 

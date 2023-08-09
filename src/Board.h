@@ -5,13 +5,14 @@
 #include "bitboard.h"
 #include "types.h"
 #include "defines.h"
-#include "Move.h"
 #include "zobrist.h"
 #include <cstring>
 #include <ostream>
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include "MoveGen.h"
+#include "Move.h"
 
 struct Mask
 {
@@ -22,12 +23,12 @@ struct Mask
 // celle-ci sera nécessaire pour effectuer un unmake_move
 struct UndoInfo
 {
-    U64 hash      = 0;      // nombre unique (?) correspondant à la position
-    U64 pawn_hash = 0;
-    U32 move;
-    int ep_square;          // case en-passant : si les blancs jouent e2-e4, la case est e3
-    int halfmove_clock = 0; // nombre de coups depuis une capture, ou un movement de pion
-    U32 castling;           // droit au roque
+    U64  hash      = 0;          // nombre unique (?) correspondant à la position
+    U64  pawn_hash = 0;
+    MOVE move      = Move::MOVE_NONE;
+    int  ep_square;              // case en-passant : si les blancs jouent e2-e4, la case est e3
+    int  halfmove_counter = 0;   // nombre de coups depuis une capture, ou un movement de pion
+    U32  castling;               // droit au roque
 };
 
 /*******************************************************
@@ -105,13 +106,36 @@ public:
     template <Color C>
     [[nodiscard]] constexpr Bitboard all_pawn_attacks(const Bitboard pawns);
 
+
+    //! \brief Returns an attack bitboard where sliders are allowed
+    //! to xray other sliders moving the same directions
+    //  code venant de Weiss
+    template<Color C>
+    [[nodiscard]] Bitboard XRayBishopAttack(const int sq)
+    {
+        Bitboard occ = occupied() ^ pieces_cp<C, PieceType::Queen>() ^ pieces_cp<C, PieceType::Bishop>();
+        return(MoveGen::bishop_moves(sq, occ));
+    }
+    template<Color C>
+    [[nodiscard]] Bitboard XRayRookAttack(const int sq)
+    {
+        Bitboard occ = occupied() ^ pieces_cp<C, PieceType::Queen>() ^ pieces_cp<C, PieceType::Rook>();
+        return(MoveGen::rook_moves(sq, occ));
+    }
+    template<Color C>
+    [[nodiscard]] Bitboard XRayQueenAttack(const int sq)
+    {
+        Bitboard occ = occupied() ^ pieces_cp<C, PieceType::Queen>() ^ pieces_cp<C, PieceType::Rook>() ^ pieces_cp<C, PieceType::Bishop>();
+        return(MoveGen::queen_moves(sq, occ));
+    }
+
     void set_fen(const std::string &fen, bool logTactics) noexcept;
     [[nodiscard]] std::string get_fen() const noexcept;
     void mirror_fen(const std::string &fen, bool logTactics);
 
-    [[nodiscard]] constexpr int get_halfmove_clock()         const noexcept { return halfmove_clock; }
-    [[nodiscard]] constexpr int get_game_clock()             const noexcept { return game_clock;     }
-    [[nodiscard]] constexpr std::size_t get_fullmove_clock() const noexcept { return fullmove_clock; }
+    [[nodiscard]] constexpr int get_halfmove_counter() const noexcept { return halfmove_counter; }
+    [[nodiscard]] constexpr int get_gamemove_counter() const noexcept { return gamemove_counter;     }
+    [[nodiscard]] constexpr int get_fullmove_counter() const noexcept { return fullmove_counter; }
 
     //! \brief  Retourne la position du roi
     template<Color C>
@@ -356,26 +380,46 @@ public:
                 pieces_cp<C, Queen>() );
     }
 
-    template<Color C>
-    constexpr bool major_pieces() const
+
+    template<Color C> constexpr int non_pawn_count() const
     {
-        return (Bcount(colorPiecesBB[C] ^ pieces_cp<C, PieceType::Pawn>()
-                       ^ pieces_cp<C, PieceType::King>())
-                > 0);
+        return (Bcount(colorPiecesBB[C]
+                       ^ pieces_cp<C, PieceType::Pawn>()
+                       ^ pieces_cp<C, PieceType::King>() ) );
     }
 
     //=================================== evaluation
+    typedef struct EvalInfo {
+        Bitboard occupiedBB;
+        Bitboard pawns[2];
+        Bitboard knights[2];
+        Bitboard bishops[2];
+        Bitboard rooks[2];
+        Bitboard queens[2];
+
+        Bitboard pawnAttacks[2];
+        Bitboard mobilityArea[2];
+        Bitboard enemyKingZone[2];
+
+        int attackPower[2] = {0, 0};
+        int attackCount[2] = {0, 0};
+
+        int phase;
+    } EvalInfo;
+
     template<bool Mode> [[nodiscard]] int evaluate();
     template<Color C> constexpr void fast_evaluate(Score& score, int &phase);
 
     Score slow_evaluate(int& phase);
 
-    template<Color Us> Score evaluate_pawns(const Bitboard UsPawnsBB, const Bitboard OtherPawnsBB);
-    template<Color Us> Score evaluate_knights(const Bitboard mobilityArea, int &phase);
-    template<Color Us> Score evaluate_bishops(const Bitboard occupiedBB, const Bitboard mobilityArea, int &phase);
-    template<Color Us> Score evaluate_rooks(const Bitboard UsPawnsBB, const Bitboard OtherPawnsBB, const Bitboard occupiedBB, const Bitboard mobilityArea, int &phase);
-    template<Color Us> Score evaluate_queens(const Bitboard UsPawnsBB, const Bitboard occupiedBB, const Bitboard mobilityArea, int &phase);
-    template<Color Us> Score evaluate_king();
+    template<Color C> Score evaluate_pawns(EvalInfo& ei);
+    template<Color C> Score evaluate_knights(EvalInfo& ei);
+    template<Color C> Score evaluate_bishops(EvalInfo& ei);
+    template<Color C> Score evaluate_rooks(EvalInfo& ei);
+    template<Color C> Score evaluate_queens(EvalInfo& ei);
+    template<Color C> Score evaluate_king(EvalInfo& ei);
+    template<Color C> Score evaluate_safety(const EvalInfo& ei);
+    bool material_draw(void);
 
     bool fast_see(const MOVE move, const int threshold) const;
     void test_value(const std::string& fen );
@@ -389,15 +433,17 @@ public:
     int x_king[2];                      // position des rois
 
     std::array<Mask, 64> allmask;
+    template<Color C>
+    Bitboard XRayAttackBB(const PieceType pt, const int sq);
 
     //------------------------------------------------------- la position
     Color side_to_move = Color::WHITE; // camp au trait
     int   ep_square    = NO_SQUARE;  // case en-passant : si les blancs jouent e2-e4, la case est e3
     U32   castling     = CASTLE_NONE; // droit au roque
 
-    int halfmove_clock = 0; // nombre de demi-coups depuis la dernière capture ou le dernier mouvement de pion.
-    int game_clock     = 0; // nombre de demi-coups de la partie
-    int fullmove_clock = 1; // le nombre de coups complets. Il commence à 1 et est incrémenté de 1 après le coup des noirs.
+    int halfmove_counter = 0; // nombre de demi-coups depuis la dernière capture ou le dernier mouvement de pion.
+    int fullmove_counter = 1; // le nombre de coups complets. Il commence à 1 et est incrémenté de 1 après le coup des noirs.
+    int gamemove_counter = 0; // nombre de demi-coups de la partie
 
     U64 hash           = 0ULL;  // nombre unique (?) correspondant à la position (clef Zobrist)
     U64 pawn_hash      = 0ULL;  // hash uniquement pour les pions
@@ -405,39 +451,46 @@ public:
     std::vector<std::string> best_moves;  // meilleur coup (pour les test tactique)
     std::vector<std::string> avoid_moves; // coup à éviter (pour les test tactique)
 
-    // private:
-
-    std::array<UndoInfo, MAX_HIST> my_history;
+    std::array<UndoInfo, MAX_HIST> game_history;
 
 
     //====================================================================
     //! \brief  Détermine s'il y a eu 50 coups sans prise ni coup de pion
     //--------------------------------------------------------------------
-    [[nodiscard]] constexpr bool fiftymoves() const noexcept { return halfmove_clock >= 100; }
+    [[nodiscard]] constexpr bool fiftymoves() const noexcept { return halfmove_counter >= 100; }
 
     //====================================================================
     //! \brief  Détermine s'il y a eu répétition de la même position
     //! Pour cela, on compare le hash code de la position.
+    //! Voir Ethereal
     //--------------------------------------------------------------------
-    [[nodiscard]] bool is_repetition() const noexcept
+    [[nodiscard]] bool is_repetition(int ply) const noexcept
     {
-        for (int i = game_clock - halfmove_clock; i < game_clock; ++i)
-        {
-            assert(i >= 0 && i < MAX_HIST);
+        int reps = 0;
 
-            if (my_history[i].hash == hash)
+        // Look through hash histories for our moves
+        for (int i = gamemove_counter - 2; i >= 0; i -= 2) {
+
+            // No draw can occur before a zeroing move
+            if (i < gamemove_counter - halfmove_counter)
+                break;
+
+            // Check for matching hash with a two fold after the root,
+            // or a three fold which occurs in part before the root move
+            if (    game_history[i].hash == hash
+                && (i > gamemove_counter - ply || ++reps == 2))
                 return true;
         }
+
         return false;
     }
 
     //=============================================================================
     //! \brief  Détermine si la position est nulle
     //-----------------------------------------------------------------------------
-    template<Color C>
-    [[nodiscard]] constexpr bool is_draw() const noexcept
+    [[nodiscard]] bool is_draw(int ply) const noexcept
     {
-        return ((is_repetition() || fiftymoves()));
+        return ((is_repetition(ply) || fiftymoves()));
     }
 
     //=============================================================================

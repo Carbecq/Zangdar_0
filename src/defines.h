@@ -8,7 +8,7 @@
 #include <iostream>
 #include <bitset>
 
-const std::string VERSION = "2.17.09";
+const std::string VERSION = "2.19.03";
 
 #define HASH
 #define USE_CACHE
@@ -41,9 +41,9 @@ using Bitboard  = U64;
 using MOVE      = U32;
 using Score     = int;
 
-static constexpr int MAX_PLY    = 120;     // profondeur max de recherche (en demi-coups)
+static constexpr int MAX_PLY    = 128;     // profondeur max de recherche (en demi-coups)
 static constexpr int MAX_HIST   = 800;     // longueur max de la partie (en demi-coups)
-static constexpr int MAX_MOVES  = 256;     // Number of moves in the candidate move array.
+static constexpr int MAX_MOVES  = 400;     // Number of moves in the candidate move array.
 static constexpr int HASH_SIZE  = 16 << 20;
 static constexpr int MAX_TIME   = 60*60*1000;   // 1 heure en ms
 
@@ -61,8 +61,7 @@ static constexpr int TBWIN_IN_X     = TBWIN - MAX_PLY;
 static constexpr int INFINITE       = MATE + 1;
 static constexpr int NOSCORE        = MATE + 2;
 
-/*
- *   -INFINITE     -MATE    -MATE_IN_X    |  TBWIN_IN_X.....TBWIN.....MATE_IN_X.....MATE.....INFINITE
+ /*  -INFINITE     -MATE    -MATE_IN_X    |  TBWIN_IN_X.....TBWIN.....MATE_IN_X.....MATE.....INFINITE
  *                 xxxx                                                        xxxxx                      zone de mat
  */
 

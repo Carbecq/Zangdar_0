@@ -105,21 +105,18 @@ void Board::clear() noexcept
 
     cpiece.fill(PieceType::NO_TYPE);
 
-    halfmove_clock  = 0;
-    fullmove_clock  = 1;
-    game_clock      = 0;
-    hash            = 0;
-    pawn_hash       = 0;
+    halfmove_counter = 0;
+    fullmove_counter = 1;
+    gamemove_counter = 0;
+    hash             = 0;
+    pawn_hash        = 0;
 
     ep_square    = NO_SQUARE;
     castling     = CASTLE_NONE;
     side_to_move = Color::WHITE;
-
-    my_history.fill(UndoInfo{0, 0, 0, 0, 0, 0});
+    
+    game_history.fill(UndoInfo{0, 0, 0, 0, 0, 0});
 }
 
 template bool Board::is_in_check<WHITE>()     const noexcept;
-template bool Board::is_draw<WHITE>() const noexcept;
-
 template bool Board::is_in_check<BLACK>()     const noexcept;
-template bool Board::is_draw<BLACK>() const noexcept;

@@ -3,6 +3,7 @@
 #include "Search.h"
 #include "PolyBook.h"
 #include "TranspositionTable.h"
+#include "Move.h"
 
 extern PolyBook Book;
 
@@ -87,7 +88,10 @@ void ThreadPool::start_thinking(const Board& board, const Timer& timer)
             threads[i].best_move  = 0;
             threads[i].best_score = -INFINITE;
             threads[i].best_depth = 0;
+            threads[i].seldepth   = 0;
             threads[i].nodes      = 0;
+            threads[i].depth      = 0;
+            threads[i].score      = 0;
 
             // copie des arguments
             Board b = board;

@@ -11,9 +11,8 @@
 #include <unistd.h>
 #include <stdio.h>
 #include "TranspositionTable.h"
+#include "Move.h"
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
 
 void sort_moves(MoveList& ml);
 
@@ -101,6 +100,10 @@ void test_suite(const std::string& abc, int dmax)
 
         fen    = liste1.at(0);                  // position fen
 
+        CB->set_fen(fen, false);
+        int sc = CB->evaluate<true>();
+        printf("%d \n", sc);
+#if 0
         // nombre de profondeurs possibles
         int nbr_prof = liste1.size() - 1;
 
@@ -156,6 +159,7 @@ void test_suite(const std::string& abc, int dmax)
                 }
             }
         } // boucle depth
+#endif
     } // boucle position
 
     // Elapsed time in milliseconds
@@ -297,11 +301,16 @@ void test_eval(const std::string& fen)
 
     // 4k3/8/8/8/8/8/8/4K2R w K - 0 1 ;D1 15 ;D2 66 ;D3 1197 ;D4 7059 ;D5 133987 ;D6 764643
 //    std::string fen2 = "7k/8/1Pp5/4P3/8/3p4/P7/7K b - - 0 1 ";
-    std::string bug = "5bk1/5p2/2Qpr1pp/1P2p3/8/3r1N1P/5PP1/5K2 w - - 0 42";
+    std::string bug =
+//        "2rqr3/pb5Q/4p1p1/1P1p2k1/3P4/2N5/PP6/1K2R3 w - - 0 28 ";
+ //   "rnbqkbnr/ppppp3/5qqq/8/3P4/QQQ5/4PPPP/RNBQKBNR b KQkq - 0 1";
+"2rBrb2/3k1p2/1Q4p1/4P3/3n1P1p/2P4P/P6P/1K1R4 w - - 0 39 ";
 
     Board b;
+
     b.test_value(fen);
 }
+// phase = 24 0 : eval = 159 159
 
 //====================================================
 //! \brief Réalisation d'un test contrôlant si
@@ -403,8 +412,8 @@ void Board::test_value(const std::string& fen )
     printf("side = %s : evaluation = %d \n", side_name[side_to_move].c_str(), evaluate<true>());
 
     // generate successor moves
-    legal_moves<WHITE>(ml);
-    sort_moves(ml);
+//    legal_moves<WHITE>(ml);
+//    sort_moves(ml);
 
     // look over all moves
 //    for (int index=0; index<ml.count; index++)

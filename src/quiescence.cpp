@@ -1,17 +1,16 @@
 #include "Search.h"
 #include "MovePicker.h"
 #include "OrderingInfo.h"
+#include "Move.h"
 
 //=============================================================
 //! \brief  Recherche jusqu'à obtenir une position calme,
 //!         donc sans prise ou promotion.
 //-------------------------------------------------------------
 template <Color C>
-int Search::quiescence(Board &board, int ply, int alpha, int beta, ThreadData* td)
+int Search::quiescence(int ply, int alpha, int beta, ThreadData* td)
 {
     assert(beta > alpha);
-
-    td->nodes++;
 
     //  Time-out
     if (stopped || check_limits(td))
@@ -20,27 +19,33 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, ThreadData* t
         return 0;
     }
 
+    // Update node count and selective depth
+    td->nodes++;
+    if (ply > td->seldepth)
+        td->seldepth = ply;
+
     // partie nulle ?
-    if(board.is_draw<C>())
-        return 0;
+    if(board.is_draw(ply))
+        return CONTEMPT;
 
     // profondeur de recherche max atteinte
     // prevent overflows
+    bool in_check = board.is_in_check<C>();
     if (ply >= MAX_PLY - 1)
-        return board.is_in_check<C>() ? 0 : board.evaluate<true>();
+        return in_check ? 0 : board.evaluate<true>();
 
     // partie trop longue
-    if (board.game_clock >= MAX_HIST - 1)
+    if (board.gamemove_counter >= MAX_HIST - 1)
         return board.evaluate<true>();
 
-    int  best_score = -INFINITE;
+    int  best_score;
     int  score;
 
-    bool in_check = board.is_in_check<C>();
-    MoveList move_list;
+     MoveList move_list;
 
     // stand pat
-    if (!in_check)
+
+     if (!in_check)
     {
         // you do not allow the side to move to stand pat if the side to move is in check.
         best_score = board.evaluate<true>();
@@ -59,6 +64,7 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, ThreadData* t
     }
     else
     {
+        best_score = -MATE + ply; // idée de Koivisto
         board.legal_evasions<C>(move_list);
     }
 
@@ -75,7 +81,7 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, ThreadData* t
             continue;
 
         board.make_move<C>(move);
-        score = -quiescence<~C>(board, ply+1, -beta, -alpha, td);
+        score = -quiescence<~C>(ply+1, -beta, -alpha, td);
         board.undo_move<C>();
 
         if (stopped)
@@ -106,5 +112,5 @@ int Search::quiescence(Board &board, int ply, int alpha, int beta, ThreadData* t
     return best_score;
 }
 
-template int Search::quiescence<WHITE>(Board &board, int ply, int alpha, int beta, ThreadData* td);
-template int Search::quiescence<BLACK>(Board &board, int ply, int alpha, int beta, ThreadData* td);
+template int Search::quiescence<WHITE>(int ply, int alpha, int beta, ThreadData* td);
+template int Search::quiescence<BLACK>(int ply, int alpha, int beta, ThreadData* td);

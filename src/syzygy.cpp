@@ -21,6 +21,7 @@
 #include "pyrrhic/tbprobe.h"
 #include "Board.h"
 #include "TranspositionTable.h"
+#include "Move.h"
 
 //=========================================================================
 //! \brief Converts a tbresult into a score
@@ -31,15 +32,15 @@ void Board::TBScore(const unsigned wdl, const unsigned dtz, int& score, int& bou
     {
     case TB_WIN:
         score = TBWIN - dtz;
-        bound = HASH_BETA;  //lower
+        bound = BOUND_LOWER;
         break;
     case TB_LOSS:
         score = -TBWIN + dtz;
-        bound = HASH_ALPHA; //upper
+        bound = BOUND_UPPER;
         break;
     default:
         score = 0;
-        bound = HASH_EXACT;
+        bound = BOUND_EXACT;
         break;
     }
 }
@@ -55,13 +56,13 @@ bool Board::probe_wdl(int& score, int& bound, int ply) const
 
     if (   ply == 0
         || castling
-        || halfmove_clock
+        || halfmove_counter
         || Bcount(occupied()) > TB_LARGEST)
         return false;
 
  //   std::cout << display() << std::endl;
 
- //     printf("probe_wdl : ply=%d cas=%d half=%d BC=%d-%d : ", ply, castling, halfmove_clock, Bcount(occupied()), TB_LARGEST);
+ //     printf("probe_wdl : ply=%d cas=%d half=%d BC=%d-%d : ", ply, castling, halfmove_counter, Bcount(occupied()), TB_LARGEST);
 
     // Tap into Pyrrhic's API. Pyrrhic takes the board representation, followed
     // by the enpass square (0 if none set), and the turn. Pyrrhic defines WHITE
@@ -110,7 +111,7 @@ bool Board::probe_root(MOVE& move) const
         occupancy_p<PieceType::King>(),   occupancy_p<PieceType::Queen>(),
         occupancy_p<PieceType::Rook>(),   occupancy_p<PieceType::Bishop>(),
         occupancy_p<PieceType::Knight>(), occupancy_p<PieceType::Pawn>(),
-        halfmove_clock,
+        halfmove_counter,
         ep_square == NO_SQUARE ? 0 : ep_square,
         turn() == WHITE ? 1 : 0,
         nullptr);

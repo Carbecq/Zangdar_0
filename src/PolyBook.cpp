@@ -3,6 +3,8 @@
 #include <string>
 #include "MoveGen.h"
 #include "ThreadPool.h"
+#include "Square.h"
+#include "Move.h"
 
 //=================================================
 //! \brief  Constructeur

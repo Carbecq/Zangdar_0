@@ -14,6 +14,8 @@
 #include "TranspositionTable.h"
 #include "ThreadPool.h"
 #include "pyrrhic/tbprobe.h"
+#include "Move.h"
+
 
 extern void test_perft(const std::string& abc, int dmax);
 extern void test_divide(const std::string& abc, int dmax);
@@ -541,9 +543,31 @@ setoption name <id> [value <x>]
 void Uci::go_run(const std::string& abc, const std::string& fen, int dmax, int tmax)
 {
     std::string auxi;
-    std::string bug = "7r/5p2/3k4/P4p2/1n3N1P/1PRbPB2/5KP1/8 b - - 1 45 ";
+    std::string bug =
 
-    //    Transtable.clear();
+        // Partie Pedantic 0.3.1 - Zangdar
+        //  20230724_1747_Pedantic_0.3.1_vs_Zangdar_2.17.09.pgn
+
+        // après 30.Qe5+ : mate -5
+        //   "2rqr3/pb6/4p1p1/1P1pQ3/3P4/2N1k3/PP6/1K4R1 b - - 5 30 ";
+
+        // après 29:Qh2+ : mate -4
+        //    "2rqr3/pb6/4p1p1/1P1p4/3P1k2/2N5/PP5Q/1K4R1 b - - 3 29 ";
+
+        // après 29:...Ke3 : mate 4
+        //"2rqr3/pb6/4p1p1/1P1p4/3P4/2N1k3/PP5Q/1K4R1 w - - 4 30 ";
+
+        // après 28:Rg1+ : mate -6 (depth 22) ; mate -5 (depth 28)
+        //  "2rqr3/pb5Q/4p1p1/1P1p2k1/3P4/2N5/PP6/1K4R1 b - - 1 28 ";
+
+        // après 27:fxg5+ : mate -6 (depth 22) ; mate -5 (depth 28)
+        //"2rqr3/pb5Q/4pkp1/1P1p2P1/3P4/2N5/PP6/1K2R3 b - - 0 27 ";
+
+        // après 27:...Kxg5 : mate -6 (depth 22) ; mate -5 (depth 28)
+        "2rqr3/pb5Q/4p1p1/1P1p2k1/3P4/2N5/PP6/1K2R3 w - - 0 28 ";
+    //"2rBrb2/3k1p2/1Q4p1/4P3/3n1P1p/2P4P/P6P/1K1R4 w - - 0 39";
+
+    Transtable.clear();
     // utiliser setoption name Clear Hash
     // permet de controler l'utilisation de la table
 
@@ -561,6 +585,20 @@ void Uci::go_run(const std::string& abc, const std::string& fen, int dmax, int t
         auxi = START_FEN;
     else if (abc == "b")
         auxi = bug;
+    else if (abc == "b1")
+        auxi = "2rqr3/pb5Q/4p1p1/1P1p2k1/3P4/2N5/PP6/1K2R3 w - - 0 28 ";
+    else if (abc == "b2")
+        auxi = "2rBrb2/3k1p2/1Q4p1/4P3/3n1P1p/2P4P/P6P/1K1R4 w - - 0 39";   // mat en 2
+    else if (abc == "b3")
+        auxi = "3Q4/p3b1k1/2p2rPp/2q5/4B3/P2P4/7P/6RK w - - ";
+    else if (abc == "b4")
+        auxi = "1nbq1r1k/3rbp1p/p1p1pp1Q/1p6/P1pPN3/5NP1/1P2PPBP/R4RK1 w - - "; // mat en 4
+    else if (abc == "b5")
+        auxi = "r5k1/1bp3pp/p2p4/1p6/5p2/1PBP1nqP/1PP3Q1/R4R1K b - - ";
+    else if (abc == "b6")
+        auxi = "8/7p/5k2/5p2/p1p2P2/Pr1pPK2/1P1R3P/8 b - - ";   // promotion
+    else if (abc == "b7")
+        auxi = "2b3k1/4rrpp/p2p4/2pP2RQ/1pP1Pp1N/1P3P1P/1q6/6RK w - - ";    // mat 6 >> descendre le temps à 3s
     else
         auxi = fen;
 

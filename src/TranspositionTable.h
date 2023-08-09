@@ -5,7 +5,10 @@
 //  Voir le site de Moreland
 //  Code provenant du code Sungorus (merci à lui)
 
-enum HASH_CODE { HASH_NONE=0, HASH_ALPHA=1, HASH_BETA=2, HASH_EXACT=4 };
+static constexpr int BOUND_NONE  = 0;
+static constexpr int BOUND_UPPER = 1;
+static constexpr int BOUND_LOWER = 2;
+static constexpr int BOUND_EXACT = 3;
 
 class TranspositionTable;
 
@@ -24,15 +27,20 @@ class TranspositionTable;
     3   24   16     8     8
              FFFF   FF    FF
 
- ATTENTION : pour stocker HASH_EXACT=4, il faut 3 bits
+ ATTENTION : pour stocker HASH_EXACT=4, il faut 3 bits <<<<<<< on a HASH_EXACT=3
 */
 
 struct HashEntry {
+#ifdef TT_XOR
+    U64 smp_key;
+    U64 smp_data;
+#else
     U64   hash;    // 64 bits
     MOVE  move;    // 32 bits  (packing = 24 bits)  >> contient "hash_code"
     I16   score;   // 16 bits
     U08   depth;   //  8 bits
     U08   date;    //  8 bits
+#endif
 };
 
 //----------------------------------------------------------
@@ -52,6 +60,44 @@ struct PawnCacheEntry {
 };
 
 //----------------------------------------------------------
+
+
+//[[nodiscard]] constexpr U64 FOLD_DATA(
+//        const int    _date,
+//        const int    _depth,
+//        const int    _score,
+//        const int    _move,
+//        const int    _flag)
+//{
+//    return( static_cast<U64>(_date)                     |
+//            static_cast<U64>(_depth)            << 8    |
+//            static_cast<U64>(_score+INF_BOUND)  << 16   |
+//            static_cast<U64>(_move)             << 32   |
+//            static_cast<U64>(_flag)             << 56);
+//}
+
+//[[nodiscard]] constexpr int EXTRACT_DATE(U64 data) noexcept {
+//    return (data & 0xFF);
+//}
+
+//[[nodiscard]] constexpr int EXTRACT_DEPTH(U64 data) noexcept {
+//    return ((data>>8) & 0xFF);
+//}
+
+//[[nodiscard]] constexpr int EXTRACT_SCORE(U64 data) noexcept {
+//    return (((data>>16) & 0xFFFF) - INF_BOUND);
+//}
+
+//[[nodiscard]] constexpr int EXTRACT_MOVE(U64 data) noexcept {
+//    return ((data>>32) & 0xFFFFFF);
+//}
+
+//[[nodiscard]] constexpr int EXTRACT_FLAG(U64 data) noexcept {
+//    return ((data>>56) & 0x7);
+//}
+
+
+
 
 /* Remarques
  *  1) le "hash_code" est mis dans "move" comme score

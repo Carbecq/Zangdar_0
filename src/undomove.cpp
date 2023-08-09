@@ -1,5 +1,6 @@
 #include "Board.h"
 #include "Square.h"
+#include "Move.h"
 
 //=============================================================
 //! \brief  Enlève un coup
@@ -9,9 +10,9 @@ template <Color C> constexpr void Board::undo_move() noexcept
     // Swap sides
     side_to_move = ~side_to_move;
 
-    game_clock--;
-
-    const auto &move    = my_history[game_clock].move;
+    gamemove_counter--;
+    
+    const auto &move    = game_history[gamemove_counter].move;
     const auto them     = !C;
     const auto dest     = Move::dest(move);
     const auto from     = Move::from(move);
@@ -21,24 +22,24 @@ template <Color C> constexpr void Board::undo_move() noexcept
 
     // En passant
     // back : Returns a reference to the last element in the vector.
-    ep_square = my_history[game_clock].ep_square;
+    ep_square = game_history[gamemove_counter].ep_square;
 
     // Halfmoves
-    halfmove_clock = my_history[game_clock].halfmove_clock;
+    halfmove_counter = game_history[gamemove_counter].halfmove_counter;
 
     // Fullmoves
-    fullmove_clock -= (C == Color::BLACK);
+    fullmove_counter -= (C == Color::BLACK);
 
     // Déplacement du roi
     if (piece == PieceType::King)
         x_king[C] = from;
 
     // Castling
-    castling = my_history[game_clock].castling;
+    castling = game_history[gamemove_counter].castling;
 
 #ifdef HASH
-    hash      = my_history[game_clock].hash;
-    pawn_hash = my_history[game_clock].pawn_hash;
+    hash      = game_history[gamemove_counter].hash;
+    pawn_hash = game_history[gamemove_counter].pawn_hash;
 #endif
 
     // Remove piece
@@ -203,23 +204,23 @@ template <Color C> constexpr void Board::undo_nullmove() noexcept
     // Swap sides
     side_to_move = ~side_to_move;
 
-    game_clock--;
+    gamemove_counter--;
 
     // En passant
-    ep_square = my_history[game_clock].ep_square;
+    ep_square = game_history[gamemove_counter].ep_square;
 
     // Halfmoves
-    halfmove_clock = my_history[game_clock].halfmove_clock;
+    halfmove_counter = game_history[gamemove_counter].halfmove_counter;
 
     // Fullmoves
-    fullmove_clock -= (C == Color::BLACK);
+    fullmove_counter -= (C == Color::BLACK);
 
     // Castling
-    castling = my_history[game_clock].castling;
+    castling = game_history[gamemove_counter].castling;
 
 #ifdef HASH
-    hash      = my_history[game_clock].hash;
-    pawn_hash = my_history[game_clock].pawn_hash;
+    hash      = game_history[gamemove_counter].hash;
+    pawn_hash = game_history[gamemove_counter].pawn_hash;
 #endif
 
     assert(valid<C>());

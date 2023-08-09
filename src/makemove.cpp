@@ -1,6 +1,7 @@
 #include "Board.h"
 #include "Square.h"
 #include <iostream>
+#include "Move.h"
 
 #ifndef NDEBUG
 #include "MoveGen.h"
@@ -28,7 +29,7 @@ constexpr U32 castle_mask[64] = {
 };
 
 
-template <Color C> constexpr void Board::make_move(const U32 move) noexcept
+template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
 {
     const auto them     = !C;
     const auto dest     = Move::dest(move);
@@ -60,7 +61,7 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
     assert(cpiece[from] == piece);
 
     // Sauvegarde des caractéristiques de la position
-    my_history[game_clock] = UndoInfo{hash, pawn_hash, move, ep_square, halfmove_clock, castling} ;
+    game_history[gamemove_counter] = UndoInfo{hash, pawn_hash, move, ep_square, halfmove_counter, castling} ;
 
 // La prise en passant n'est valable que tout de suite
 // Il faut donc la supprimer
@@ -91,10 +92,10 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
 #endif
 
     // Increment halfmove clock
-    halfmove_clock++;
+    halfmove_counter++;
 
     // Fullmoves
-    fullmove_clock += (C == Color::BLACK);
+    fullmove_counter += (C == Color::BLACK);
 
     //====================================================================================
     //  Coup normal (pas spécial)
@@ -122,7 +123,7 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
 
             if (piece == PieceType::Pawn)
             {
-                halfmove_clock = 0;
+                halfmove_counter = 0;
 #ifdef HASH
                 pawn_hash ^= piece_key[C][PieceType::Pawn][from] ^ piece_key[C][PieceType::Pawn][dest];
 #endif
@@ -170,7 +171,7 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
                 assert((C == Color::WHITE && Square::rank(from) == 6) ||
                        (C == Color::BLACK && Square::rank(from) == 1));
 
-                halfmove_clock = 0;
+                halfmove_counter = 0;
             }
 
             //====================================================================================
@@ -196,7 +197,7 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
                 flip(colorPiecesBB[them], dest);
                 flip(typePiecesBB[captured], dest);
 
-                halfmove_clock = 0;
+                halfmove_counter = 0;
 
 #ifdef HASH
                 hash ^= piece_key[them][captured][dest];
@@ -240,7 +241,7 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
             assert((C == Color::WHITE && Square::rank(from) == 6) ||
                    (C == Color::BLACK && Square::rank(from) == 1));
 
-            halfmove_clock = 0;
+            halfmove_counter = 0;
 
         }
     }
@@ -272,7 +273,7 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
             assert((C == Color::WHITE && Square::rank(dest) == 3) || (C == Color::BLACK && Square::rank(dest) == 4));
             assert((C == Color::WHITE && Square::rank(from) == 1) || (C == Color::BLACK && Square::rank(from) == 6));
 
-            halfmove_clock = 0;
+            halfmove_counter = 0;
             ep_square = (C == Color::WHITE) ? Square::south(dest) : Square::north(dest);
 
 #ifdef HASH
@@ -303,7 +304,7 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
             assert((C == Color::WHITE && Square::rank(from) == 4) || (C == Color::BLACK && Square::rank(from) == 3));
             assert(Square::file(dest) - Square::file(from) == 1     || Square::file(from) - Square::file(dest) == 1);
 
-            halfmove_clock = 0;
+            halfmove_counter = 0;
 
             // Remove the captured pawn
             if (C == Color::WHITE)
@@ -422,7 +423,7 @@ template <Color C> constexpr void Board::make_move(const U32 move) noexcept
     // Swap sides
     side_to_move = ~side_to_move;
 
-    game_clock++;
+    gamemove_counter++;
 
 #ifdef HASH
     hash ^= side_key;
@@ -461,7 +462,7 @@ template <Color C> constexpr void Board::make_nullmove() noexcept
 {
     // Sauvegarde des caractéristiques de la position
     // NullMove = 0
-    my_history[game_clock] = UndoInfo{hash, pawn_hash, 0, ep_square, halfmove_clock, castling};
+    game_history[gamemove_counter] = UndoInfo{hash, pawn_hash, Move::MOVE_NONE, ep_square, halfmove_counter, castling};
 
 // La prise en passant n'est valable que tout de suite
 // Il faut donc la supprimer
@@ -475,15 +476,15 @@ template <Color C> constexpr void Board::make_nullmove() noexcept
     ep_square = NO_SQUARE;
 
     // Increment halfmove clock
-    halfmove_clock++;
+    halfmove_counter++;
 
     // Fullmoves
-    fullmove_clock += (C == Color::BLACK);
+    fullmove_counter += (C == Color::BLACK);
 
     // Swap sides
     side_to_move = ~side_to_move;
 
-    game_clock++;
+    gamemove_counter++;
 
 #ifdef HASH
     hash ^= side_key;

@@ -1,6 +1,7 @@
 #include "MovePicker.h"
 #include "evaluate.h"
 #include "types.h"
+#include "Move.h"
 
 
 //=====================================================

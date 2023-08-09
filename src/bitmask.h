@@ -72,6 +72,11 @@ constexpr Bitboard NOT_FILE_H_BB = ~FILE_H_BB;
 constexpr Bitboard NOT_FILE_HG_BB = 4557430888798830399ULL;
 constexpr Bitboard NOT_FILE_AB_BB = 18229723555195321596ULL;
 
+constexpr Bitboard OutpostRanks[2] = {
+    RANK_4_BB | RANK_5_BB | RANK_6_BB,
+    RANK_3_BB | RANK_4_BB | RANK_5_BB
+};
+
 extern Bitboard RankMask64[64];
 extern Bitboard FileMask64[64];
 extern Bitboard DiagonalMask64[64];
