@@ -1,8 +1,6 @@
 #ifndef LIBCHESS_MOVE_HPP
 #define LIBCHESS_MOVE_HPP
 
-#include <cassert>
-#include <cstdint>
 #include <ostream>
 #include <sstream>
 #include "defines.h"
@@ -26,7 +24,7 @@ namespace Move
 
 Note : la prise enpassant est aussi une capture
 
-les bits 25 à 32 sont utilisés pour la Table de Transposition
+les bits 24, 25, 26 sont utilisés pour la Table de Transposition (les numéros commencent à 0)
 
 0000 0111 0000 0000 0000 0000 0000 0000
           <--- move 24 bits        --->
@@ -35,8 +33,6 @@ uuuu u    inutilisés
 
 il faut 3 bits pour stocker le hash code :
     HASH_NONE=0 (000), HASH_ALPHA=1 (001), HASH_BETA=2 (010), HASH_EXACT=4 (100)
-
-
 */
 
 constexpr int     SHIFT_FROM  = 0;
@@ -50,24 +46,37 @@ constexpr int     SHIFT_CODE  = 24;
 constexpr U32 MOVE_NONE = 0;
 
 // Fields
+//                                           dest  from
+//                               FFFPPPCCCMMMDDDDDDFFFFFF
 constexpr U32 MOVE_FROM      = 0b000000000000000000111111;
-constexpr U32 MOVE_DEST      = 0b000000000000111111000000;
-constexpr U32 MOVE_PIECE     = 0b000000000111000000000000;
-constexpr U32 MOVE_CAPT      = 0b000000111000000000000000;
-constexpr U32 MOVE_PROMO     = 0b000111000000000000000000;
 
-constexpr U32 MOVE_FLAGS     = 0b111000000000000000000000;
+//                               FFFPPPCCCMMMDDDDDDFFFFFF
+constexpr U32 MOVE_DEST      = 0b000000000000111111000000;
+
+//                               FFFPPPCCCMMMDDDDDDFFFFFF
+constexpr U32 MOVE_PIECE     = 0b000000000111000000000000;
+
+//                               FFFPPPCCCMMMDDDDDDFFFFFF
+constexpr U32 MOVE_CAPT      = 0b000000111000000000000000;
+
+//                                   FFFPPPCCCMMMDDDDDDFFFFFF
+constexpr U32 MOVE_PROMO     =     0b000111000000000000000000;
+
+constexpr U32 MOVE_FLAGS     =     0b111000000000000000000000;
 
 // Special move flags
 constexpr U32 FLAG_NONE      = 0;
-constexpr U32 FLAG_DOUBLE    = 0b001000000000000000000000;
-constexpr U32 FLAG_ENPASSANT = 0b010000000000000000000000;
-constexpr U32 FLAG_CASTLE    = 0b100000000000000000000000;
+constexpr U32 FLAG_DOUBLE    =     0b001000000000000000000000;
+constexpr U32 FLAG_ENPASSANT =     0b010000000000000000000000;
+constexpr U32 FLAG_CASTLE    =     0b100000000000000000000000;
 
-constexpr U32 MOVE_DEPL      = 0b111111111000000000000000;  // mettre l'inverse ?
+constexpr U32 MOVE_DEPL      = 0b0000111111111000000000000000;
 
-constexpr U32 MOVE_MOVE      = 0b000111111111111111111111111;
+//                                   FFFPPPCCCMMMDDDDDDFFFFFF
+constexpr U32 MOVE_MOVE      = 0b0000111111111111111111111111;
 
+//                                       FFFPPPCCCMMMDDDDDDFFFFFF
+constexpr U32 MOVE_CODE      = 0b00000111000000000000000000000000;
 
 /* X Y  X&Y  X|Y  X^Y
  * 0 0  0    0    0
@@ -160,11 +169,16 @@ constexpr U32 MOVE_MOVE      = 0b000111111111111111111111111;
     return (move & (MOVE_CAPT | MOVE_PROMO | FLAG_ENPASSANT));
 }
 
+//! \brief Détermine si les 2 coups sont identiques
+[[nodiscard]] constexpr bool same_move(const MOVE& m1, const MOVE& m2) {
+    // toggle all bits in m1 by m2 and check if no bits are toggled in the least significant 24 bits
+    return ((m1 ^ m2) & MOVE_MOVE) == 0;
+}
+
 //---------------------------------------------------------------Pour la table de transposition
 
-//! \brief  Retourne le hash_code
 [[nodiscard]] constexpr int get_code(const U32 move) noexcept {
-    return (move >>SHIFT_CODE);
+    return ((move & MOVE_CODE) >> SHIFT_CODE);
 }
 
 //! \brief  Retourne le move
@@ -177,6 +191,7 @@ constexpr U32 MOVE_MOVE      = 0b000111111111111111111111111;
     MOVE m = move & MOVE_MOVE;          // clearing;
     return (m | (code << SHIFT_CODE));
 }
+
 
 //=================================================
 //! \brief Affichage du coup

@@ -101,9 +101,9 @@ void test_suite(const std::string& abc, int dmax)
         fen    = liste1.at(0);                  // position fen
 
         CB->set_fen(fen, false);
-        int sc = CB->evaluate<true>();
-        printf("%d \n", sc);
-#if 0
+//        int sc = CB->evaluate<true>();
+//        printf("%d \n", sc);
+//#if 0
         // nombre de profondeurs possibles
         int nbr_prof = liste1.size() - 1;
 
@@ -159,7 +159,7 @@ void test_suite(const std::string& abc, int dmax)
                 }
             }
         } // boucle depth
-#endif
+//#endif
     } // boucle position
 
     // Elapsed time in milliseconds
@@ -171,8 +171,8 @@ void test_suite(const std::string& abc, int dmax)
     printf("# Passed       %10u\n",     passed_tests);
     printf("# Failed       %10u\n",     failed_tests);
     printf("# Total        %10u\n",     total_tests);
-    printf("Moves Actual   %10lu\n",    total_actual);
-    printf("Moves Expected %10lu\n",    total_expected);
+    printf("Moves Actual   %10llu\n",   total_actual);
+    printf("Moves Expected %10llu\n",   total_expected);
     printf("Time           %9.3f s\n",  sec);
     if (sec > 0)
         printf("Million Moves/s        %.3f\n",     (double)total_actual/(double)sec/1000000.0);
@@ -444,7 +444,7 @@ void Board::test_value(const std::string& fen )
 //------------------------------------------------------
 void sort_moves(MoveList& ml)
 {
-    for (int i=0; i<ml.count; i++)
+    for (auto i=0; i<ml.count; i++)
     {
         MOVE m = ml.moves[i];
         if (Move::is_capturing(m))
@@ -458,7 +458,7 @@ void sort_moves(MoveList& ml)
             ml.values[i] = 0;
         }
     }
-    for (int i=0; i<ml.count-1; i++)
+    for (auto i=0; i<ml.count-1; i++)
     {
         for (int j=i; j<ml.count; j++)
         {

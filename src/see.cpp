@@ -1,6 +1,6 @@
 #include "Board.h"
 #include "Move.h"
-#include "MoveGen.h"
+#include "Attacks.h"
 #include "evaluate.h"
 
 
@@ -104,12 +104,12 @@ bool Board::fast_see(const MOVE move, const int threshold) const
         // Si l'attaque était diagonale, il peut y avoir
         // des attaquants fou ou dame cachés derrière
         if (piece == Pawn || piece == Bishop || piece == Queen)
-            all_attackersBB |= MoveGen::bishop_moves(dest, occupiedBB) & bqBB;
+            all_attackersBB |= Attacks::bishop_moves(dest, occupiedBB) & bqBB;
 
         // Si l'attaque était orthogonale, il peut y avoir
         // des attaquants tour ou dame cachés derrière
         if (piece == Rook || piece == Queen)
-            all_attackersBB |= MoveGen::rook_moves(dest, occupiedBB) & rqBB;
+            all_attackersBB |= Attacks::rook_moves(dest, occupiedBB) & rqBB;
     }
 
     // Side to move after the loop loses

@@ -37,7 +37,7 @@ template <Color C> constexpr void Board::undo_move() noexcept
     // Castling
     castling = game_history[gamemove_counter].castling;
 
-#ifdef HASH
+#if defined USE_HASH
     hash      = game_history[gamemove_counter].hash;
     pawn_hash = game_history[gamemove_counter].pawn_hash;
 #endif
@@ -218,7 +218,7 @@ template <Color C> constexpr void Board::undo_nullmove() noexcept
     // Castling
     castling = game_history[gamemove_counter].castling;
 
-#ifdef HASH
+#if defined USE_HASH
     hash      = game_history[gamemove_counter].hash;
     pawn_hash = game_history[gamemove_counter].pawn_hash;
 #endif

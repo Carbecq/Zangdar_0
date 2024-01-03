@@ -95,6 +95,7 @@ void Board::clear() noexcept
 {
     colorPiecesBB[0] = 0ULL;
     colorPiecesBB[1] = 0ULL;
+
     typePiecesBB[0] = 0ULL;
     typePiecesBB[1] = 0ULL;
     typePiecesBB[2] = 0ULL;
@@ -104,6 +105,9 @@ void Board::clear() noexcept
     typePiecesBB[6] = 0ULL;
 
     cpiece.fill(PieceType::NO_TYPE);
+
+    x_king[WHITE] = NO_SQUARE;                      // position des rois
+    x_king[BLACK] = NO_SQUARE;                      // position des rois
 
     halfmove_counter = 0;
     fullmove_counter = 1;

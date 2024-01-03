@@ -1,7 +1,6 @@
 #include <cassert>
 #include "TranspositionTable.h"
 #include "defines.h"
-#include <bitset>
 #include <iostream>
 #include <cstring>
 #include "Move.h"
@@ -15,38 +14,25 @@
 #include "TranspositionTable.h"
 #include "defines.h"
 
-//========================================================
-//! \brief  Constructeur défaut
-//--------------------------------------------------------
-TranspositionTable::TranspositionTable()
-{
-#ifdef DEBUG_LOG
-    char message[100];
-    sprintf(message, "TranspositionTable::constructeur : %d ", DEFAULT_HASH_SIZE);
-    printlog(message);
-#endif
-    tt_entries = nullptr;
-    tt_size    = 0;
-    tt_date    = 0;
-
-    set_size(DEFAULT_HASH_SIZE);
-}
 
 //========================================================
 //! \brief  Constructeur avec argument
 //--------------------------------------------------------
-TranspositionTable::TranspositionTable(int MB)
+TranspositionTable::TranspositionTable(int MB) :
+    pawn_size(PAWN_HASH_SIZE*1024),
+    pawn_mask(PAWN_HASH_SIZE*1024 - 1)
 {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[100];
     sprintf(message, "TranspositionTable::constructeur MB : %d ", MB);
     printlog(message);
 #endif
+
     tt_entries = nullptr;
     tt_size    = 0;
     tt_date    = 0;
 
-    set_size(MB);
+    init_size(MB);
 }
 
 //========================================================
@@ -60,11 +46,11 @@ TranspositionTable::~TranspositionTable()
 //========================================================
 //! \brief  Initialisation de la table
 //--------------------------------------------------------
-void TranspositionTable::set_size(int mbsize)
+void TranspositionTable::init_size(int mbsize)
 {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[1000];
-    sprintf(message, "TranspositionTable::set_size : %d ", mbsize);
+    sprintf(message, "TranspositionTable::init_size : %d ", mbsize);
     printlog(message);
 #endif
 
@@ -88,15 +74,13 @@ void TranspositionTable::set_size(int mbsize)
     assert(tt_size!=0 && (tt_size&(tt_size-1))==0); // power of 2
 
     tt_buckets = 4;
-    tt_mask = tt_size - tt_buckets;
-
+    tt_mask    = tt_size - tt_buckets;
     tt_entries = new HashEntry[tt_size];
+
     clear();
-    clear_pawn_table();
-    clear_eval_table();
 
 
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     sprintf(message, "TranspositionTable init complete with %d entries of %lu bytes for a total of %lu bytes (%lu MB) \n",
             tt_size, sizeof(HashEntry), tt_size*sizeof(HashEntry), tt_size*sizeof(HashEntry)/1024/1024);
     printlog(message);
@@ -104,122 +88,52 @@ void TranspositionTable::set_size(int mbsize)
 }
 
 //========================================================
-//! \brief  Re-Initialisation de la table
+//! \brief  Allocation uniquement de la Hash Table
 //--------------------------------------------------------
-void TranspositionTable::resize(int mbsize)
+void TranspositionTable::set_hash_size(int mbsize)
 {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[100];
-    sprintf(message, "TranspositionTable::resize : %d ", mbsize);
+    sprintf(message, "TranspositionTable::set_hash_size : %d ", mbsize);
     printlog(message);
 #endif
 
     delete [] tt_entries;
     tt_entries = nullptr;
     tt_size = 0;
-    set_size(mbsize);
+    init_size(mbsize);
 }
-
-#ifdef TT_XOR
-//void VerifyEntrySMP(int k, HashEntry *entry)
-//{
-//    int e_flag = Move::flag(entry->move);
-//    int e_move = Move::move(entry->move);
-
-//    U64 smp_data = FOLD_DATA(entry->score, entry->depth, e_flag, e_move);
-//    U64 smp_key  = entry->hash ^ smp_data;
-
-//    if (smp_data != entry->smp_data) { printf("data error %d", k); exit(1);}
-//    if (smp_key != entry->smp_key) { printf("smp_key error %d", k); exit(1);}
-
-//    int move = EXTRACT_MOVE(smp_data);
-//    int flag = EXTRACT_FLAGS(smp_data);
-//    int score = EXTRACT_SCORE(smp_data);
-//    int depth = EXTRACT_DEPTH(smp_data);
-
-//    if (move != e_move) { printf("move error %d", k); exit(1);}
-//    if (score != entry->score) { printf("score error %d", k); exit(1);}
-//    if (depth != entry->depth) { printf("depth error %d", k); exit(1);}
-//    if (flag != e_flag) { printf("flags error %d (smp_flag=%d entry_flag=%d) \n", k, flag, e_flag);
-//        printf("%s \n", Move::name(e_move).c_str());
-//        printf("%s \n", Move::name(move).c_str());
-//        exit(1);
-//    }
-//}
-#endif
 
 //========================================================
 //! \brief  Remise à zéro de la table de transposition
 //--------------------------------------------------------
 void TranspositionTable::clear(void)
 {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[100];
     sprintf(message, "TranspositionTable::clear");
     printlog(message);
 #endif
 
-     tt_date = 0;
+    tt_date = 0;
 
-    for (HashEntry* entry = tt_entries; entry < tt_entries + tt_size; entry++)
-    {
-#ifdef TT_XOR
-        entry->smp_key = 0ULL;
-        entry->smp_data = 0ULL;
-#else
-        entry->hash = 0;
-        entry->date = 0;
-        entry->move = 0;
-        entry->score = 0;
-        entry->depth = 0;
-#endif
-    }
-
-}
-
-//========================================================
-//! \brief  Remise à zéro de la table des pions
-//--------------------------------------------------------
-void TranspositionTable::clear_pawn_table(void)
-{
-#ifdef DEBUG_LOG
-    char message[100];
-    sprintf(message, "TranspositionTable::clear_pawn_table");
-    printlog(message);
-#endif
-
-    std::memset(PawnCacheTable, 0, sizeof(PawnCacheEntry) * PAWN_CACHE_SIZE);
-
-}
-
-//========================================================
-//! \brief  Remise à zéro de la table des évaluations
-//--------------------------------------------------------
-void TranspositionTable::clear_eval_table(void)
-{
-#ifdef DEBUG_LOG
-    char message[100];
-    sprintf(message, "TranspositionTable::clear_eval_table");
-    printlog(message);
-#endif
-
-    std::memset(EvalCacheTable, 0, sizeof(U64) * EVAL_CACHE_SIZE);
-
+    std::memset(tt_entries, 0, sizeof(HashEntry) * tt_size);
+    std::memset(pawn_entries, 0, sizeof(PawnHashEntry) * pawn_size);
 }
 
 //========================================================
 //! \brief  Mise à jour de l'age
+//! tt_date = [0...255]
 //--------------------------------------------------------
 void TranspositionTable::update_age(void)
 {
     tt_date = (tt_date + 1) & 255;
 }
 
-
 //========================================================
 //! \brief  Ecriture dans la hashtable d'une nouvelle donnée
 //--------------------------------------------------------
-void TranspositionTable::store(U64 hash, MOVE move, int score, int flag, int depth, int ply)
+void TranspositionTable::store(U64 hash, MOVE move, Score score, Score eval, int flag, int depth, int ply)
 {
     HashEntry *entry=nullptr, *replace=nullptr;
     int oldest, age;
@@ -230,12 +144,15 @@ void TranspositionTable::store(U64 hash, MOVE move, int score, int flag, int dep
     oldest  = -1;
     entry   = tt_entries + (hash & tt_mask);
 
+    // extract the 32-bit key from the 64-bit zobrist hash
+    U32 key32 = hash >> 32;
+
     for (int i = 0; i < tt_buckets; i++)
     {
-        if (entry->hash == hash)
+        if (entry->hash == key32)
         {
             if (!move)
-                move = Move::get_move(entry->move);
+                move = entry->move;
             replace = entry;
             break;
         }
@@ -249,12 +166,13 @@ void TranspositionTable::store(U64 hash, MOVE move, int score, int flag, int dep
         entry++;
     }
 
-
-    replace->hash  = hash;
-    replace->date  = tt_date;
-    replace->move  = Move::get_code_move(move, flag);
+    replace->hash  = key32;
+    replace->move  = move;
     replace->score = score;
+    replace->eval  = eval;
     replace->depth = depth;
+    replace->date  = tt_date;
+    replace->flag  = flag;
 }
 
 //========================================================
@@ -267,24 +185,29 @@ void TranspositionTable::store(U64 hash, MOVE move, int score, int flag, int dep
 //! \param{in]  depth
 //! \param{in]  ply
 //--------------------------------------------------------
-bool TranspositionTable::probe(U64 hash, int ply, MOVE& move, int& score, int &flag, int& depth)
+bool TranspositionTable::probe(U64 hash, int ply, MOVE& move, Score& score, Score& eval, int &flag, int& depth)
 {
     move  = Move::MOVE_NONE;
     score = NOSCORE;
+    eval  = NOSCORE;
     flag  = BOUND_NONE;
 
     HashEntry* entry = tt_entries + (hash & tt_mask);
 
+    // extract the 32-bit key from the 64-bit zobrist hash
+    U32 key32 = hash >> 32;
+
     for (int i = 0; i < tt_buckets; i++)
     {
-        if (entry->hash == hash)
+        if (entry->hash == key32)
         {
             entry->date = tt_date;
 
-            move  = Move::get_move(entry->move);
-            flag  = Move::get_code(entry->move);
+            move  = entry->move;
+            flag  = entry->flag;
             depth = entry->depth;
             score = ScoreFromTT(entry->score, ply);
+            eval  = entry->eval;
 
             return true;
         }
@@ -294,56 +217,21 @@ bool TranspositionTable::probe(U64 hash, int ply, MOVE& move, int& score, int &f
     return false;
 }
 
-//================================================================
-//! \brief  Stockage de l'évaluation dans le cache
-//! \param[in] hash     clef Zobrist de la position
-//! \param[in] eval     évaluation
-//----------------------------------------------------------------
-void TranspositionTable::store_evaluation(U64 hash, int eval)
-{
-    // Code repris d'Ethereal
-    // On combine en 1 seule valeur la clef et l'évaluation
-    // Voir aussi comment on fait dans l'évaluation S(mg, eg)
-
-    // On met à 0 les 16 bits (0-15) du hash
-    // pour y stocker l'évaluation
-    EvalCacheTable[hash & EVAL_CACHE_MASK]
-        = (hash & ~0xFFFF) | (uint16_t)((int16_t)eval);
-}
-
-//================================================================
-//! \brief  Récupération de l'évaluation dans le cache
-//! \param[in]  hash    clef Zobrist de la position
-//! \param[in]  color   camp au trait
-//! \param[out] eval    évaluation
-//----------------------------------------------------------------
-bool TranspositionTable::probe_evaluation(U64 hash, Color color, int& eval) const
-{
-    EvalCacheEntry eve;
-    U64       key;
-
-    eve = EvalCacheTable[hash & EVAL_CACHE_MASK];
-    key = (eve & ~0xFFFF) | (hash & 0xFFFF);
-
-    eval = (int16_t)((uint16_t)(eve & 0xFFFF));
-    eval = (color == WHITE) ? eval : -eval;
-    return hash == key;
-}
-
 //===============================================================
 //! \brief  Recherche d'une donnée dans la table des pions
 //! \param[in]  hash    code hash des pions
 //! \param{out] score   score de cette position
 //---------------------------------------------------------------
-bool TranspositionTable::probe_pawn_cache(U64 hash, Score &score)
+bool TranspositionTable::probe_pawn_table(U64 hash, Score &eval)
 {
-    PawnCacheEntry* entry = &PawnCacheTable[hash % PAWN_CACHE_SIZE];
+    PawnHashEntry* entry = pawn_entries + (hash & pawn_mask);
 
-    if (entry->pawn_hash == hash)
+    if (entry->hash == hash)
     {
-        score = entry->score;
+        eval = entry->eval;
         return true;
     }
+
     return false;
 }
 
@@ -353,12 +241,12 @@ bool TranspositionTable::probe_pawn_cache(U64 hash, Score &score)
 //! \param[in]  hash    hash des pions
 //! \param[in]  score   évaluation
 //-------------------------------------------------------------
-void TranspositionTable::store_pawn_cache(U64 hash, Score score)
+void TranspositionTable::store_pawn_table(U64 hash, Score eval)
 {
-    PawnCacheEntry* entry = &PawnCacheTable[hash % PAWN_CACHE_SIZE];
+    PawnHashEntry* entry = pawn_entries + (hash & pawn_mask);
 
-    entry->pawn_hash = hash;
-    entry->score     = score;
+    entry->hash = hash;
+    entry->eval = eval;
 }
 
 
@@ -381,4 +269,20 @@ void TranspositionTable::stats()
 //    std::cout << "usage  = " << (double)pcachenohit / (double)pcachehit << std::endl;
 }
 
+//=======================================================================
+//! \brief Estimation de l'utilisation de la table de transposition
+//! On regarde combien d'entrées contiennent une valeur récente.
+//! La valeur retournée va de 0 à 1000 (1 = 0.1 %)
+//-----------------------------------------------------------------------
+int TranspositionTable::hash_full()
+{
+    int used = 0;
+
+    for (int i = 0; i < 1000; i++)
+        if (   tt_entries[i].move != Move::MOVE_NONE
+            && tt_entries[i].date == tt_date)
+            used++;
+
+    return used;
+}
 

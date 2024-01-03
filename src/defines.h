@@ -4,23 +4,23 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <atomic>
 #include <iostream>
 #include <bitset>
 
-const std::string VERSION = "2.19.03";
+#define USE_HASH
+#define USE_PAWN_CACHE
 
-#define HASH
-#define USE_CACHE
-//#define TT_XOR
-//#define PRETTY
+#define USE_RAZORING
+#define USE_REVERSE_FUTILITY_PRUNING
+#define USE_NULL_MOVE_PRUNING
+#define USE_PROBCUT
+#define USE_INTERNAL_ITERATIVE_DEEPENING
+#define USE_LATE_MOVE_PRUNING
+#define USE_LATE_MOVE_REDUCTION
 
-#define LMP
+// NE PAS UTILISER PRETTY avec Arena (score mal affiché)
+//#define USE_PRETTY
 
-//#define DEBUG_EVAL
-//#define DEBUG_LOG
-//#define DEBUG_HASH
-//#define DEBUG_TIME
 
 /*******************************************************
  **	Généralités
@@ -28,8 +28,8 @@ const std::string VERSION = "2.19.03";
 
 using I08   = int8_t;
 using U08   = uint8_t;
-using I16   = int16_t;
-using U16   = uint16_t;
+using I16   = int16_t;          // −32768 to 32767
+using U16   = uint16_t;         // 0 to 65535
 using I32   = int32_t;
 using U32   = uint32_t;
 using I64   = int64_t;
@@ -44,12 +44,12 @@ using Score     = int;
 static constexpr int MAX_PLY    = 128;     // profondeur max de recherche (en demi-coups)
 static constexpr int MAX_HIST   = 800;     // longueur max de la partie (en demi-coups)
 static constexpr int MAX_MOVES  = 400;     // Number of moves in the candidate move array.
-static constexpr int HASH_SIZE  = 16 << 20;
 static constexpr int MAX_TIME   = 60*60*1000;   // 1 heure en ms
 
-static constexpr int DEFAULT_HASH_SIZE  = 128;
-static constexpr int MIN_HASH_SIZE      = 1;
-static constexpr int MAX_HASH_SIZE      = 1024;
+static constexpr int HASH_SIZE      = 128;      // en Mo , 128 ?
+static constexpr int MIN_HASH_SIZE  = 1;
+static constexpr int MAX_HASH_SIZE  = 1024;
+static constexpr int PAWN_HASH_SIZE = 64;       // en Ko
 
 static constexpr int MAX_THREADS    = 32;
 
@@ -59,9 +59,12 @@ static constexpr int TBWIN          = 30000;
 static constexpr int TBWIN_IN_X     = TBWIN - MAX_PLY;
 
 static constexpr int INFINITE       = MATE + 1;
-static constexpr int NOSCORE        = MATE + 2;
+static constexpr int NOSCORE        = MATE + 2;     // ne peut jamais être atteint
 
- /*  -INFINITE     -MATE    -MATE_IN_X    |  TBWIN_IN_X.....TBWIN.....MATE_IN_X.....MATE.....INFINITE
+
+/*                                           29872          30000     30872         31000    31001  : moi
+ *                                           39872          30000     30001         30129    30130  : weiss 0.10
+ *   -INFINITE     -MATE    -MATE_IN_X    |  TBWIN_IN_X.....TBWIN.....MATE_IN_X.....MATE.....INFINITE
  *                 xxxx                                                        xxxxx                      zone de mat
  */
 
@@ -104,13 +107,19 @@ const std::string WAC_2           = "8/7p/5k2/5p2/p1p2P2/Pr1pPK2/1P1R3P/8 b - -"
 #ifdef HOME
 const std::string Home = HOME;
 #else
-    const std::string Home = "./";
+const std::string Home = "./";
 #endif
 
+#ifdef VERSION
+const std::string Version = VERSION;
+#else
+const std::string Version = "2";
+#endif
 
 extern std::vector<std::string> split(const std::string& s, char delimiter);
 extern void printlog(const std::string& message);
-extern bool UseSyzygy;
+
+
 
 //======================================
 //! \brief Ecriture en binaire

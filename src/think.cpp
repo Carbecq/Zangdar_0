@@ -1,13 +1,12 @@
 #include "MovePicker.h"
-#include "OrderingInfo.h"
 #include "Search.h"
 #include "ThreadPool.h"
 #include "Timer.h"
 #include "TranspositionTable.h"
-#include <iostream>
 #include "Move.h"
 
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
+
 
 //======================================================
 //! \brief  Lancement d'une recherche
@@ -17,25 +16,25 @@
 //!
 //------------------------------------------------------
 template<Color C>
-void Search::think(int threadID)
+void Search::think(const Board &m_board, const Timer &m_timer, int _index)
 {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[100];
     sprintf(message, "Search::think (thread=%d)", threadID);
     printlog(message);
 #endif
 
-    ThreadData* td = &threadPool.threads[threadID];
+    board = m_board;
+    timer = m_timer;
 
-    timer.start();
-    timer.setup(C);
+    ThreadData* td = &threadPool.threadData[_index];
 
     // iterative deepening
     iterative_deepening<C>(td);
 
-    if (threadID == 0)
+    if (_index == 0)
     {
-        if (logUci)
+        if (threadPool.get_logUci())
         {
             show_uci_best(td);
             timer.show_time();
@@ -64,29 +63,30 @@ void Search::iterative_deepening(ThreadData* td)
         // Search position, using aspiration windows for higher depths
         td->score = aspiration_window<C>(ply, pv, td);
 
-        if (stopped)
+        if (td->stopped)
             break;
 
         // L'itération s'est terminée sans problème
         // On peut mettre à jour les infos UCI
         if (td->index == 0)
         {
+            bool uncertain = pv.line[0] != td->best_move;
+
             td->best_depth = td->depth;
             td->best_move  = pv.line[0];
             td->best_score = td->score;
+
+            auto elapsed = timer.elapsedTime();
+
+            if (threadPool.get_logUci())
+                show_uci_result(td, elapsed, pv);
+
+            // If an iteration finishes after optimal time usage, stop the search
+            if (timer.finishOnThisDepth(elapsed, uncertain))
+                break;
+
+            td->seldepth = 0;
         }
-
-        U64 elapsed     = 0; // durée en millisecondes
-        bool shouldStop = timer.finishOnThisDepth(elapsed);
-
-        if (logUci && td->index == 0)
-            show_uci_result(td, elapsed, pv);
-
-        // est-ce qu'on a le temps pour une nouvelle itération ?
-        if (shouldStop == true)
-            break;
-
-        td->seldepth = 0;
     }
 }
 
@@ -117,7 +117,7 @@ int Search::aspiration_window(int ply, PVariation& pv, ThreadData* td)
     {
         score = alpha_beta<C>(ply, alpha, beta, std::max(1, depth), pv, td);
 
-        if (stopped)
+        if (td->stopped)
             break;
 
         // Search failed low, adjust window and reset depth
@@ -167,6 +167,8 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
     assert(board.valid<C>());
     assert(beta > alpha);
 
+    SearchInfo* si = &td->info;
+
     // Update node count and selective depth
     td->nodes++;
     if (ply > td->seldepth)
@@ -185,9 +187,9 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
         return board.evaluate<true>();
 
     //  Time-out
-    if (stopped || check_limits(td))
+    if (td->stopped || check_limits(td))
     {
-        stopped = true;
+        td->stopped = true;
         return 0;
     }
 
@@ -198,6 +200,7 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
     int  best_score = -INFINITE;        // initially assume the worst case
     MOVE best_move  = Move::MOVE_NONE;  // meilleur coup local
     int  max_score  = INFINITE;         // best possible
+
 
     //  Check Extension
     if (inCheck == true && depth + 1 < MAX_PLY)
@@ -226,29 +229,35 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
     }
 
     //  Recherche de la position actuelle dans la table de transposition
-    int  tt_score;
-    MOVE tt_move  = Move::MOVE_NONE;
-    int  tt_flag;
-    int  tt_depth;
-    bool tt_hit   = Transtable.probe(board.hash, ply, tt_move, tt_score, tt_flag, tt_depth);
+    Score tt_score;
+    Score tt_eval;
+    MOVE  tt_move;
+    int   tt_flag;
+    int   tt_depth;
+    bool  tt_hit   = transpositionTable.probe(board.hash, ply, tt_move, tt_score, tt_eval, tt_flag, tt_depth);
 
     if (tt_hit)
     {
         // Trust TT if not a pvnode and the entry depth is sufficiently high
-        if (    tt_depth >= depth && !isPVNode
-            && (tt_score >= beta ? tt_flag & BOUND_LOWER : tt_flag & BOUND_UPPER))
+        if (   (tt_depth >= depth && !isPVNode)
+            && (   (tt_flag & BOUND_EXACT)
+                || (tt_flag & BOUND_LOWER && tt_score >= beta)
+                || (tt_flag & BOUND_UPPER && tt_score <= alpha)))
         {
             return tt_score;
         }
     }
 
-    // Probe the Syzygy Tablebases
-    int tbScore, tbBound;
-    if (UseSyzygy && board.probe_wdl(tbScore, tbBound, ply) == true)
+    // Probe the Syzygy     Tablebases
+    int tbScore, tbEval, tbBound;
+    if (threadPool.get_useSyzygy() && board.probe_wdl(tbScore, tbBound, ply) == true)
     {
-        if (tbBound == BOUND_EXACT || (tbBound == BOUND_LOWER ? tbScore >= beta : tbScore <= alpha))
+        td->tbhits++;
+
+        if (    tbBound & BOUND_EXACT
+            || (tbBound & BOUND_LOWER ? tbScore >= beta : tbScore <= alpha))
         {
-            Transtable.store(board.hash, Move::MOVE_NONE, tbScore, tbBound, depth, MAX_PLY);
+            transpositionTable.store(board.hash, Move::MOVE_NONE, tbScore, tbEval, tbBound, depth, MAX_PLY);
             return tbScore;
         }
 
@@ -257,7 +266,7 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
         if (isPVNode)
         {
             // Never score something worse than the known Syzygy value
-            if (tbBound == BOUND_LOWER)
+            if (tbBound & BOUND_LOWER)
             {
                 best_score = tbScore;
                 alpha = std::max(alpha, tbScore);
@@ -276,24 +285,29 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
 
     if (inCheck)
     {
-        static_eval = -MATE + ply;
+        si->eval[ply] = static_eval = -MATE + ply;
     }
     else
     {
-        static_eval = board.evaluate<true>();
+        si->eval[ply] = static_eval = board.evaluate<true>();
     }
-    eval_history [ply] = static_eval;
+    if (tt_hit)
+        si->eval[ply] = static_eval = tt_eval;
+
 
     /*  Avons-nous amélioré la position ?
         Si on ne s'est pas amélioré dans cette ligne, on va pouvoir couper un peu plus */
     bool improving = false;
     if (ply > 2)
-        improving = !inCheck && (static_eval > eval_history[ply - 2]);
+        improving = !inCheck && (static_eval > si->eval[ply - 2]);
 
+
+    //  Controle si on va pouvoir utiliser des techniques de coupe pre-move
     int  score;
 
     if (!inCheck && !isRoot && !isPVNode)
     {
+#if defined USE_RAZORING
         //---------------------------------------------------------------------
         //  RAZORING
         //---------------------------------------------------------------------
@@ -307,7 +321,9 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
                 return score;
             }
         }
+#endif
 
+#if defined USE_REVERSE_FUTILITY_PRUNING
         //---------------------------------------------------------------------
         //  STATIC NULL MOVE PRUNING ou aussi REVERSE FUTILITY PRUNING
         //---------------------------------------------------------------------
@@ -321,7 +337,9 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
             if (static_eval - eval_margin >= beta)
                 return static_eval - eval_margin; // Fail Soft
         }
+#endif
 
+#if defined USE_NULL_MOVE_PRUNING
         //---------------------------------------------------------------------
         //  NULL MOVE PRUNING
         //---------------------------------------------------------------------
@@ -331,13 +349,13 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
             && board.non_pawn_count<C>() > 0
             && board.game_history[board.gamemove_counter-1].move != Move::MOVE_NONE)
         {
-            int R = 3 + depth / 5 + std::min(3, (static_eval - beta)/256);
+            int R = 3 + depth / 5 + std::min(3, (static_eval - beta)/256); //ZZZEVAL
 
             board.make_nullmove<C>();
             score = -alpha_beta<~C>(ply + 1, -beta, -beta + 1, depth - 1 - R, new_pv, td);
             board.undo_nullmove<C>();
 
-            if (stopped)
+            if (td->stopped)
                 return 0;
 
             // Cutoff
@@ -348,46 +366,86 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
                 return(score >= TBWIN_IN_X ? beta : score);
             }
         }
+#endif
+
+#if defined USE_PROBCUT
+        //---------------------------------------------------------------------
+        //  ProbCut
+        //---------------------------------------------------------------------
+        if (depth >= 5
+            && abs(beta) < TBWIN_IN_X
+            && !(   tt_hit
+                 && tt_flag & BOUND_UPPER
+                 && tt_score < beta))
+        {
+            int threshold = beta + 200;
+
+            MovePicker movePicker(&board, si, Move::MOVE_NONE, Move::MOVE_NONE, Move::MOVE_NONE, true, 0);
+            MOVE pbMove;
+
+            while ( (pbMove = movePicker.next_move() ) != Move::MOVE_NONE )
+            {
+                board.make_move<C>(pbMove);
+
+                // See if a quiescence search beats pbBeta
+                int pbScore = -quiescence<~C>(ply+1, -threshold, -threshold+1, td);
+
+                // If it did, do a proper search with reduced depth
+                if (pbScore >= threshold)
+                    pbScore = -alpha_beta<~C>(ply+1, -threshold, -threshold + 1, depth-4, new_pv, td);
+
+                board.undo_move<C>();
+
+                // Cut if the reduced depth search beats pbBeta
+                if (pbScore >= threshold)
+                {
+                    // Store pbScore in TT ??
+                    return pbScore;
+                }
+            }
+        }
+#endif
     } // end Pruning
 
+#if defined USE_INTERNAL_ITERATIVE_DEEPENING
     //---------------------------------------------------------------------
     // Internal Iterative Deepening.
     //---------------------------------------------------------------------
-    if (
-        tt_move == Move::MOVE_NONE
-        &&  depth >= 4)
+    if (   tt_move == Move::MOVE_NONE
+        && depth >= 4)
     {
         depth--;
     }
+#endif
 
     //====================================================================================
     //  Génération des coups
     //------------------------------------------------------------------------------------
-    MoveList move_list;
-    board.legal_moves<C>(move_list);
 
-    MovePicker movePicker(ply, tt_move, &my_orderingInfo, &board, &move_list);
-
+    MovePicker movePicker(&board, si, tt_move, si->killer1[ply], si->killer2[ply], false, 0);
     MOVE move;
     const int old_alpha = alpha;
     int moveCount = 0, quietCount = 0;
 
     // Boucle sur tous les coups
-    while (movePicker.hasNext())
+    while ( (move = movePicker.next_move() ) != Move::MOVE_NONE )
     {
-        move = movePicker.getNext();
-        bool isQuiet = !Move::is_tactical(move);
+        bool isQuiet = !Move::is_tactical(move);    // capture, promotion (avec capture ou non), prise en-passant
 
-#ifdef ACC
-        // Affichage du coup courant
-        if (ply==0 && isPVNode && !td->index && my_timer.elapsedTime() > CurrmoveTimerMS)
-            show_uci_current(move, legalMoves, depth);
+       int extension = 0;
+
+#if defined USE_SINGULAR_EXTENSION
+        //-------------------------------------------------
+        //  SINGULAR EXTENSION
+        //-------------------------------------------------
+
+
 #endif
 
+#if defined USE_LATE_MOVE_PRUNING
         //-------------------------------------------------
         //  Late Move Pruning / Move Count Based Pruning
         //-------------------------------------------------
-#ifdef LMP
         if (   !isPVNode
             && !inCheck
             && best_score > -TBWIN_IN_X
@@ -402,10 +460,11 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
         moveCount++;
         quietCount += isQuiet;
 
+#if defined USE_LATE_MOVE_REDUCTION
         //------------------------------------------------------------------------------------
         //  LATE MOVE REDUCTION
         //------------------------------------------------------------------------------------
-        int newDepth = depth - 1 ;
+        int newDepth = depth - 1 + extension;
         bool doFullDepthSearch;
 
         if (   depth > 2
@@ -437,13 +496,14 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
         // Full depth alpha-beta window search
         if (isPVNode && ((score > alpha && score < beta) || moveCount == 1))
             score = -alpha_beta<~C>(ply+1, -beta, -alpha, newDepth, new_pv, td);
+#endif
 
 
         // retract current move
         board.undo_move<C>();
 
         //  Time-out
-        if (stopped)
+        if (td->stopped)
             return 0;
 
         // On a trouvé un nouveau meilleur coup
@@ -463,7 +523,7 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
 
                 // Update search history
                 if (isQuiet)
-                    my_orderingInfo.incrementHistory(C, Move::piece(move), Move::dest(move), depth);
+                    si->incrementHistory(C, move, depth);
 
                 // If score beats beta we have a cutoff
                 if (score >= beta)
@@ -472,10 +532,9 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
                     // Update Killers
                     if (isQuiet)
                     {
-                        my_orderingInfo.updateKillers(ply, move);
+                        si->updateKillers(ply, move);
                     }
-
-                    Transtable.store(board.hash, move, score, BOUND_LOWER, depth, ply);
+                    transpositionTable.store(board.hash, move, score, static_eval, BOUND_LOWER, depth, ply);
                     return score;
                 }
 
@@ -495,21 +554,21 @@ int Search::alpha_beta(int ply, int alpha, int beta, int depth, PVariation& pv, 
     // don't let our score inflate too high (tb)
     best_score = std::min(best_score, max_score);
 
-    if (!stopped)
+    if (!td->stopped)
     {
         //  si on est ici, c'est que l'on a trouvé au moins 1 coup
         //  et de plus : score < beta
         //  si score >  alpha    : c'est un bon coup : HASH_EXACT
         //  si score <= alpha    : c'est un coup qui n'améliore pas alpha : HASH_ALPHA
         int flag = (alpha != old_alpha) ? BOUND_EXACT : BOUND_UPPER;
-        Transtable.store(board.hash, best_move, best_score, flag, depth, ply);
+        transpositionTable.store(board.hash, best_move, best_score, static_eval, flag, depth, ply);
     }
 
     return best_score;
 }
 
-template void Search::think<WHITE>(int id);
-template void Search::think<BLACK>(int id);
+template void Search::think<WHITE>(const Board &m_board, const Timer &m_timer, int _index);
+template void Search::think<BLACK>(const Board &m_board, const Timer &m_timer, int _index);
 
 template void Search::iterative_deepening<WHITE>(ThreadData* td);
 template void Search::iterative_deepening<BLACK>(ThreadData* td);

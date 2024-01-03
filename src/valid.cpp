@@ -8,7 +8,7 @@ template <Color C>
 {
 //    std::cout << "valid debut" << std::endl;
 
-#ifdef HASH
+#if defined USE_HASH
     U64 hash_1, hash_2;
     calculate_hash(hash_1, hash_2);
     if (hash != hash_1)

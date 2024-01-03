@@ -60,7 +60,7 @@ constexpr Bitboard LightSquares = 0x55aa55aa55aa55aaULL;
 constexpr Bitboard DarkSquares  = 0xaa55aa55aa55aa55ULL;
 constexpr Bitboard Empty        = 0x0000000000000000ULL;
 constexpr Bitboard AllSquares   = 0xffffffffffffffffULL;
-constexpr Bitboard Edge         = 0xff818181818181ffULL;
+constexpr Bitboard OuterSquares = 0xff818181818181ffULL;
 
 constexpr Bitboard Promotion_Rank[] = {RANK_8_BB, RANK_1_BB};
 constexpr Bitboard Promoting_Rank[] = {RANK_7_BB, RANK_2_BB};

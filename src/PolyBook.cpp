@@ -1,8 +1,6 @@
-#include <iomanip>
 #include "PolyBook.h"
 #include <string>
-#include "MoveGen.h"
-#include "ThreadPool.h"
+#include "Attacks.h"
 #include "Square.h"
 #include "Move.h"
 
@@ -11,7 +9,7 @@
 //-------------------------------------------------
 PolyBook::PolyBook()
 {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[100];
     sprintf(message, "PolyBook::constructeur  ");
     printlog(message);
@@ -20,7 +18,7 @@ PolyBook::PolyBook()
     nbr_entries = 0;
     path        = "./";
 
-    if (threadPool.get_useBook())
+    if (use_book == true)
         init("book.bin");
 }
 
@@ -29,7 +27,7 @@ PolyBook::PolyBook()
 //-------------------------------------------------
 PolyBook::PolyBook(const std::string& name)
 {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[100];
     sprintf(message, "PolyBook::constructeur; name : %s ", name.c_str());
     printlog(message);
@@ -38,7 +36,7 @@ PolyBook::PolyBook(const std::string& name)
     nbr_entries = 0;
     path        = "./";
 
-    if (threadPool.get_useBook())
+    if (use_book == true)
         init(name);
 }
 
@@ -93,7 +91,7 @@ U64 PolyBook::calculate_hash(const Board& board)
     if (epsq != NO_SQUARE)
     {
         // Bitboard des attaques de pion ADVERSE
-        Bitboard bb = MoveGen::pawn_attacks(!us, epsq);
+        Bitboard bb = Attacks::pawn_attacks(!us, epsq);
 
         if (bb & board.colorPiecesBB[board.side_to_move] & board.typePiecesBB[Pawn])
         {
@@ -114,14 +112,14 @@ U64 PolyBook::calculate_hash(const Board& board)
 //----------------------------------------------------
 void PolyBook::init(const std::string &name)
 {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[100];
     sprintf(message, "PolyBook::init : %s ", name.c_str());
     printlog(message);
 #endif
 
     std::size_t file_size;
-    threadPool.set_useBook(false);
+    use_book = false;
 
     std::string     str_file = path + "/" + name;
     std::ifstream   file;
@@ -129,7 +127,7 @@ void PolyBook::init(const std::string &name)
     file.open(str_file, std::ifstream::in | std::ifstream::binary);
     if (!file.is_open())
     {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
         sprintf(message, "PolyBook::init : Can't open the book file %s ", str_file.c_str());
         printlog(message);
 #endif
@@ -141,7 +139,7 @@ void PolyBook::init(const std::string &name)
     file_size = file.tellg();
     if(file_size < sizeof(PolyBookEntry))
     {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
         sprintf(message, "PolyBook::init : No entry found  ");
         printlog(message);
 #endif
@@ -152,7 +150,7 @@ void PolyBook::init(const std::string &name)
     // Allocation de la bibliothèque
     nbr_entries = file_size / sizeof(PolyBookEntry);
 
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     sprintf(message, "PolyBook::init : %u Entries Found In File", nbr_entries);
     printlog(message);
 #endif
@@ -161,14 +159,14 @@ void PolyBook::init(const std::string &name)
     file.read((char*)entries, file_size);
     if (file)
     {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
         sprintf(message, "PolyBook::init : Read successfull");
         printlog(message);
 #endif
     }
     else
     {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
         sprintf(message, "PolyBook::init : Read failed : only %td could be read", file.gcount());
         printlog(message);
 #endif
@@ -176,9 +174,9 @@ void PolyBook::init(const std::string &name)
     file.close();
 
     if (nbr_entries > 0)
-        threadPool.set_useBook(true);
+        use_book = true;
 
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     sprintf(message, "PolyBook::init : use_book = %d ", threadPool.get_useBook());
     printlog(message);
 #endif
@@ -189,7 +187,7 @@ void PolyBook::init(const std::string &name)
 //--------------------------------------------------
 void PolyBook::clean()
 {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[100];
     sprintf(message, "PolyBook::clean ");
     printlog(message);
@@ -206,7 +204,7 @@ void PolyBook::clean()
 //---------------------------------------------------------
 MOVE PolyBook::get_move(const Board& board)
 {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[100];
     sprintf(message, "PolyBook::get_move ");
     printlog(message);

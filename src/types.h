@@ -3,16 +3,20 @@
 
 #include <array>
 #include <string>
+#include "defines.h"
 
 /*******************************************************
  ** Les couleurs
  **---------------------------------------------------*/
 
 #include <string>
+
+constexpr int N_COLORS = 2;
+
 enum Color : int
 {
-    WHITE = 0,
-    BLACK
+    WHITE    = 0,
+    BLACK    = 1
 };
 
 const std::string side_name[] = {"White", "Black"};
@@ -24,18 +28,20 @@ constexpr Color operator~(Color C) { return Color(C ^ BLACK); }
  ** Les pièces
  **---------------------------------------------------*/
 
+constexpr int N_PIECES = 7;
+
 enum PieceType : int
 {
-    NO_TYPE = 0,
-    Pawn    = 1,
-    Knight  = 2,
-    Bishop  = 3,
-    Rook    = 4,
-    Queen   = 5,
-    King    = 6,
+    NO_TYPE  = 0,
+    Pawn     = 1,
+    Knight   = 2,
+    Bishop   = 3,
+    Rook     = 4,
+    Queen    = 5,
+    King     = 6
 };
 
-static constexpr std::array<PieceType, 7> AllPieceType = {
+static constexpr std::array<PieceType, N_PIECES> AllPieceType = {
     NO_TYPE,
     Pawn,
     Knight,
@@ -45,18 +51,17 @@ static constexpr std::array<PieceType, 7> AllPieceType = {
     King
 };
 
-const std::string piece_name[7] {
+const std::string piece_name[N_PIECES] {
     "NONE", "Pawn", "Knight", "Bishop", "Rook", "Queen", "King"
 };
 
-const std::string piece_symbol[2][7] {
+const std::string piece_symbol[N_COLORS][N_PIECES] {
                                      {  "?", "P", "N", "B", "R", "Q", "K"},
                                      {  "?", "p", "n", "b", "r", "q", "k"},
-
                                      };
 
-static const std::array<std::string, 7> nom_piece_max = { "?", "", "N", "B", "R", "Q", "K"};
-static const std::array<std::string, 7> nom_piece_min = { "?", "", "n", "b", "r", "q", "k"};
+static const std::array<std::string, N_PIECES> nom_piece_max = { "?", "", "N", "B", "R", "Q", "K"};
+static const std::array<std::string, N_PIECES> nom_piece_min = { "?", "", "n", "b", "r", "q", "k"};
 
 enum PieceValue {
     P_MG =  101, P_EG =  160,
@@ -70,6 +75,8 @@ enum PieceValue {
  ** Les cases
  **---------------------------------------------------*/
 
+constexpr int N_SQUARES = 64;
+
 enum Squares : int {
     A1, B1, C1, D1, E1, F1, G1, H1,
     A2, B2, C2, D2, E2, F2, G2, H2,
@@ -82,7 +89,7 @@ enum Squares : int {
     NO_SQUARE
 };
 
-const std::string square_name[] = {
+const std::string square_name[N_SQUARES] = {
     "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
     "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
     "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
@@ -109,5 +116,10 @@ typedef enum Direction {
     NORTH_WEST  = 7
 } Direction;
 
+struct PVariation {
+    MOVE line[MAX_PLY+1];
+    int  length;
+};
 
 #endif // TYPES_H
+

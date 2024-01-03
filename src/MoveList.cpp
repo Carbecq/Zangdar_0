@@ -1,12 +1,10 @@
 #include "MoveList.h"
-#include "Move.h"
 
 //============================================
 //! \brief  Constructeur
 //--------------------------------------------
-MoveList::MoveList()
+MoveList::MoveList() : count(0)
 {
-    count = 0;
 }
 
 //=============================================

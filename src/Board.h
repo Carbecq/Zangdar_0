@@ -11,7 +11,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include "MoveGen.h"
+#include "Attacks.h"
 #include "Move.h"
 
 struct Mask
@@ -30,6 +30,26 @@ struct UndoInfo
     int  halfmove_counter = 0;   // nombre de coups depuis une capture, ou un movement de pion
     U32  castling;               // droit au roque
 };
+
+//=================================== evaluation
+typedef struct EvalInfo {
+    Bitboard occupiedBB;
+    Bitboard pawns[2];
+    Bitboard knights[2];
+    Bitboard bishops[2];
+    Bitboard rooks[2];
+    Bitboard queens[2];
+
+    Bitboard pawnAttacks[2];
+    Bitboard mobilityArea[2];
+    Bitboard enemyKingZone[2];
+
+    int attackPower[2] = {0, 0};
+    int attackCount[2] = {0, 0};
+
+    int phase;
+
+} EvalInfo;
 
 /*******************************************************
  ** Droit au roque
@@ -114,20 +134,38 @@ public:
     [[nodiscard]] Bitboard XRayBishopAttack(const int sq)
     {
         Bitboard occ = occupied() ^ pieces_cp<C, PieceType::Queen>() ^ pieces_cp<C, PieceType::Bishop>();
-        return(MoveGen::bishop_moves(sq, occ));
+        return(Attacks::bishop_moves(sq, occ));
     }
     template<Color C>
     [[nodiscard]] Bitboard XRayRookAttack(const int sq)
     {
         Bitboard occ = occupied() ^ pieces_cp<C, PieceType::Queen>() ^ pieces_cp<C, PieceType::Rook>();
-        return(MoveGen::rook_moves(sq, occ));
+        return(Attacks::rook_moves(sq, occ));
     }
     template<Color C>
     [[nodiscard]] Bitboard XRayQueenAttack(const int sq)
     {
         Bitboard occ = occupied() ^ pieces_cp<C, PieceType::Queen>() ^ pieces_cp<C, PieceType::Rook>() ^ pieces_cp<C, PieceType::Bishop>();
-        return(MoveGen::queen_moves(sq, occ));
+        return(Attacks::queen_moves(sq, occ));
     }
+
+
+    //        switch (pt)
+    //        {
+    //        case PieceType::Bishop:
+    //            occ ^= pieces_cp<C, PieceType::Queen>() ^ pieces_cp<C, PieceType::Bishop>();
+    //            return(Attacks::bishop_moves(sq, occ));
+    //            break;
+    //        case PieceType::Rook:
+    //            occ ^= pieces_cp<C, PieceType::Queen>() ^ pieces_cp<C, PieceType::Rook>();
+    //            return(Attacks::rook_moves(sq, occ));
+    //            break;
+    //        case PieceType::Queen:
+    //            occ ^= pieces_cp<C, PieceType::Queen>() ^ pieces_cp<C, PieceType::Rook>() ^ pieces_cp<C, PieceType::Bishop>();
+    //            return(Attacks::queen_moves(sq, occ));
+    //            break;
+    //        }
+    //    }
 
     void set_fen(const std::string &fen, bool logTactics) noexcept;
     [[nodiscard]] std::string get_fen() const noexcept;
@@ -157,12 +195,10 @@ public:
     template<Color C>
     [[nodiscard]] constexpr bool is_in_check() const noexcept { return square_attacked<~C>(king_position<C>()); }
 
-    template<Color C>
-    constexpr void legal_moves(MoveList &ml) noexcept;
-    template<Color C>
-    constexpr void legal_captures(MoveList &ml) noexcept;
-    template<Color C>
-    constexpr void legal_evasions(MoveList &ml) noexcept;
+    template<Color C> constexpr void legal_moves(MoveList &ml) noexcept;
+    template<Color C> constexpr void legal_noisy(MoveList &ml) noexcept;
+    template<Color C> constexpr void legal_quiet(MoveList &ml) noexcept;
+    template<Color C> constexpr void legal_evasions(MoveList &ml) noexcept;
 
     template<Color C>
     void apply_token(const std::string &token) noexcept;
@@ -171,12 +207,12 @@ public:
 
     void add_quiet_move(MoveList &ml, int from, int dest, PieceType piece, U32 flags) const noexcept;
     void add_capture_move(
-                          MoveList &ml,
-                          int from,
-                          int dest,
-                          PieceType piece,
-                          PieceType captured,
-                          U32 flags) const noexcept;
+        MoveList &ml,
+        int from,
+        int dest,
+        PieceType piece,
+        PieceType captured,
+        U32 flags) const noexcept;
     void add_quiet_promotion(MoveList &ml, int from, int dest, PieceType promo) const noexcept;
     void add_capture_promotion(MoveList &ml,
                                int from,
@@ -372,8 +408,8 @@ public:
     [[nodiscard]] constexpr bool valid() const noexcept;
     [[nodiscard]] std::string display() const noexcept;
 
-    template<Color C>
-    Bitboard getNonPawnMaterial() const noexcept{
+    template<Color C> Bitboard getNonPawnMaterial() const noexcept{
+
         return (pieces_cp<C, Knight>() |
                 pieces_cp<C, Bishop>() |
                 pieces_cp<C, Rook>()   |
@@ -387,25 +423,6 @@ public:
                        ^ pieces_cp<C, PieceType::Pawn>()
                        ^ pieces_cp<C, PieceType::King>() ) );
     }
-
-    //=================================== evaluation
-    typedef struct EvalInfo {
-        Bitboard occupiedBB;
-        Bitboard pawns[2];
-        Bitboard knights[2];
-        Bitboard bishops[2];
-        Bitboard rooks[2];
-        Bitboard queens[2];
-
-        Bitboard pawnAttacks[2];
-        Bitboard mobilityArea[2];
-        Bitboard enemyKingZone[2];
-
-        int attackPower[2] = {0, 0};
-        int attackCount[2] = {0, 0};
-
-        int phase;
-    } EvalInfo;
 
     template<bool Mode> [[nodiscard]] int evaluate();
     template<Color C> constexpr void fast_evaluate(Score& score, int &phase);
@@ -424,35 +441,10 @@ public:
     bool fast_see(const MOVE move, const int threshold) const;
     void test_value(const std::string& fen );
 
-
     void init_bitmasks();
 
-    Bitboard colorPiecesBB[2] = {0ULL}; // occupancy board pour chaque couleur
-    Bitboard typePiecesBB[7]  = {0ULL};  // bitboard pour chaque type de piece
-    std::array<PieceType, 64> cpiece;   // tableau des pièces par case
-    int x_king[2];                      // position des rois
-
     std::array<Mask, 64> allmask;
-    template<Color C>
-    Bitboard XRayAttackBB(const PieceType pt, const int sq);
-
-    //------------------------------------------------------- la position
-    Color side_to_move = Color::WHITE; // camp au trait
-    int   ep_square    = NO_SQUARE;  // case en-passant : si les blancs jouent e2-e4, la case est e3
-    U32   castling     = CASTLE_NONE; // droit au roque
-
-    int halfmove_counter = 0; // nombre de demi-coups depuis la dernière capture ou le dernier mouvement de pion.
-    int fullmove_counter = 1; // le nombre de coups complets. Il commence à 1 et est incrémenté de 1 après le coup des noirs.
-    int gamemove_counter = 0; // nombre de demi-coups de la partie
-
-    U64 hash           = 0ULL;  // nombre unique (?) correspondant à la position (clef Zobrist)
-    U64 pawn_hash      = 0ULL;  // hash uniquement pour les pions
-
-    std::vector<std::string> best_moves;  // meilleur coup (pour les test tactique)
-    std::vector<std::string> avoid_moves; // coup à éviter (pour les test tactique)
-
-    std::array<UndoInfo, MAX_HIST> game_history;
-
+    template<Color C> Bitboard XRayAttackBB(const PieceType pt, const int sq);
 
     //====================================================================
     //! \brief  Détermine s'il y a eu 50 coups sans prise ni coup de pion
@@ -503,7 +495,27 @@ public:
         cpiece[sq] = p;
     }
 
+    bool test_mirror(const std::string &line);
 
+    //------------------------------------------------------------Syzygy
+    void TBScore(const unsigned wdl, const unsigned dtz, int &score, int &bound) const;
+    bool probe_wdl(int &score, int &bound, int ply) const;
+    MOVE convertPyrrhicMove(unsigned result) const;
+    bool probe_root(MOVE& move) const;
+
+    //*************************************************************************
+    //*************************************************************************
+    //*************************************************************************
+
+    //------------------------------------------------------- la position
+    Bitboard colorPiecesBB[2] = {0ULL}; // occupancy board pour chaque couleur
+    Bitboard typePiecesBB[7]  = {0ULL};  // bitboard pour chaque type de piece
+    std::array<PieceType, 64> cpiece;   // tableau des pièces par case
+    int x_king[2];                      // position des rois
+
+    Color side_to_move = Color::WHITE; // camp au trait
+    int   ep_square    = NO_SQUARE;  // case en-passant : si les blancs jouent e2-e4, la case est e3
+    U32   castling     = CASTLE_NONE; // droit au roque
 
     /*
      * The Halfmove Clock inside an chess position object takes care of enforcing the fifty-move rule.
@@ -515,13 +527,17 @@ public:
      *
      */
 
-    bool test_mirror(const std::string &line);
+    int halfmove_counter = 0; // nombre de demi-coups depuis la dernière capture ou le dernier mouvement de pion.
+    int fullmove_counter = 1; // le nombre de coups complets. Il commence à 1 et est incrémenté de 1 après le coup des noirs.
+    int gamemove_counter = 0; // nombre de demi-coups de la partie
 
-    //------------------------------------------------------------Syzygy
-    void TBScore(const unsigned wdl, const unsigned dtz, int &score, int &bound) const;
-    bool probe_wdl(int &score, int &bound, int ply) const;
-    MOVE convertPyrrhicMove(unsigned result) const;
-    bool probe_root(MOVE& move) const;
+    U64 hash           = 0ULL;  // nombre unique (?) correspondant à la position (clef Zobrist)
+    U64 pawn_hash      = 0ULL;  // hash uniquement pour les pions
+
+    std::vector<std::string> best_moves;  // meilleur coup (pour les test tactique)
+    std::vector<std::string> avoid_moves; // coup à éviter (pour les test tactique)
+
+    std::array<UndoInfo, MAX_HIST> game_history;
 
 };
 

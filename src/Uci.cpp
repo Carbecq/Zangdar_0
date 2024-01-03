@@ -2,9 +2,6 @@
 #include <sstream>
 #include <string>
 #include <algorithm>
-#include <cstring>
-#include <thread>
-#include <memory>
 #include <iomanip>
 
 #include "defines.h"
@@ -16,6 +13,8 @@
 #include "pyrrhic/tbprobe.h"
 #include "Move.h"
 
+Board   uci_board;
+Timer   uci_timer;
 
 extern void test_perft(const std::string& abc, int dmax);
 extern void test_divide(const std::string& abc, int dmax);
@@ -24,22 +23,20 @@ extern void test_eval(const std::string& abc);
 extern void test_mirror();
 extern void test_see();
 
-Board           uci_board;
-Timer           uci_timer;
 
 //======================================
 //! \brief  Boucle principale UCI
 //--------------------------------------
 void Uci::run()
 {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[100];
     sprintf(message, "Uci::run ");
     printlog(message);
 #endif
 
     // print engine info
-    std::cout << "id name Zangdar " << VERSION << std::endl;
+    std::cout << "id name Zangdar " << Version << std::endl;
     std::cout << "id author Philippe Chevalier" << std::endl;
 
     /*
@@ -51,8 +48,8 @@ void Uci::run()
      * Arena va envoyer la commande "setoption.." au programme.
      *
      */
-
-    std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE <<" min " << MIN_HASH_SIZE << " max " << MAX_HASH_SIZE << std::endl;
+    
+    std::cout << "option name Hash type spin default " << HASH_SIZE <<" min " << MIN_HASH_SIZE << " max " << MAX_HASH_SIZE << std::endl;
     std::cout << "option name Clear Hash type button" << std::endl;
     std::cout << "option name Threads type spin default 1 min 1 max " << MAX_THREADS << std::endl;
     std::cout << "option name OwnBook type check default false" << std::endl;
@@ -96,7 +93,7 @@ void Uci::run()
              */
 
             // print engine info
-            std::cout << "id name Zangdar " << VERSION << std::endl;
+            std::cout << "id name Zangdar " << Version << std::endl;
             std::cout << "id author Philippe Chevalier" << std::endl;
             std::cout << "uciok" << std::endl;
         }
@@ -126,11 +123,8 @@ void Uci::run()
             // the next search (started with "position" and "go") will be from
             // a different game.
             uci_board.set_fen(START_FEN, false);
-            Transtable.clear();
-            Transtable.clear_pawn_table();
-            Transtable.clear_eval_table();
-
-            //TODO clear history, killers
+            transpositionTable.clear();
+            threadPool.reset();
         }
 
         else if (token == "go")
@@ -166,7 +160,7 @@ void Uci::run()
 
         else if (token == "v")
         {
-            std::cout << "Zangdar " << VERSION << std::endl;
+            std::cout << "Zangdar " << Version << std::endl;
         }
         else if (token == "s")
         {
@@ -206,9 +200,6 @@ void Uci::run()
 
         else if (token == "run")
         {
-            Transtable.clear();
-            Transtable.clear_pawn_table();
-            Transtable.clear_eval_table();
             std::string str;
             iss >> str;
 
@@ -257,10 +248,18 @@ void Uci::run()
             printf("c++ 2x \n");
 #endif
 
+// NOTE : On peut avoir simultanément : _MSC_VER ET __llvm__
+//        Il faut faire attention à l'ordre des tests
+//        pour définir quelle version sera prise (bitboard.h)
+
 #if defined(_MSC_VER)
-            printf("msc \n");
-#elif defined(__GNUC__)
-            printf("gnu \n");
+            printf("compilateur Microsoft \n");
+#endif
+#if defined(__GNUC__)
+            printf("compilateur Gnu \n");
+#endif
+#if defined(__llvm__)
+            printf("compilateur Clang \n");
 #endif
         }
     }
@@ -359,13 +358,19 @@ void Uci::parse_go(std::istringstream& iss)
         }
     }
 
+    // Reset the time manager
+    uci_timer.reset();
+
     uci_timer = Timer(infinite, wtime, btime, winc, binc, movestogo, depth, nodes, movetime);
+    uci_timer.start();
+    uci_timer.setup(uci_board.side_to_move);
+
 
 // La recherche est lancée dans une ou plusieurs threads séparées
 // Le programme principal contine dans la thread courante
 // de façon à continuer à recevoir les commandes
 // de UCI. Pax exemple : stop, quit.
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[100];
     sprintf(message, "UCI::start_thinking ");
     printlog(message);
@@ -381,7 +386,6 @@ void Uci::parse_go(std::istringstream& iss)
 //---------------------------------------------------------
 void Uci::parse_options(std::istringstream& iss)
 {
-    char message[100];
 
     /*
 setoption name <id> [value <x>]
@@ -425,11 +429,11 @@ setoption name <id> [value <x>]
             mb = std::min(mb, MAX_HASH_SIZE);
             mb = std::max(mb, MIN_HASH_SIZE);
 
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
             sprintf(message, "Uci::parse_options : Set Hash to %d MB", mb);
             printlog(message);
 #endif
-            Transtable.resize(mb);
+            transpositionTable.set_hash_size(mb);
         }
 
         else if (option_name == "Clear")
@@ -437,13 +441,11 @@ setoption name <id> [value <x>]
             iss >> auxi;
             if (auxi == "Hash")
             {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
                 sprintf(message, "Uci::parse_options : Hash Clear");
                 printlog(message);
 #endif
-                Transtable.clear();
-                Transtable.clear_pawn_table();
-                Transtable.clear_eval_table();
+                transpositionTable.clear();
             }
         }
 
@@ -453,16 +455,7 @@ setoption name <id> [value <x>]
             int nbr;
             iss >> nbr;
 
-            // Check if the number of processors can be determined
-            int processorCount = static_cast<int>(std::thread::hardware_concurrency());
-            if (processorCount == 0)
-                processorCount = MAX_THREADS;
-
-            nbr     = std::min(nbr, processorCount);
-            nbr     = std::max(nbr, 1);
-            nbr     = std::min(nbr, MAX_THREADS);
-
-            threadPool.set_nbrThreads(nbr);
+            threadPool.set_threads(nbr);
         }
 
         else if (option_name == "OwnBook")
@@ -481,19 +474,19 @@ setoption name <id> [value <x>]
 
             if (use_book == "true")
             {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
                 sprintf(message, "Uci::parse_options : OwnBook true");
                 printlog(message);
 #endif
-                Book.init("book.bin");
+                ownBook.init("book.bin");
             }
             else
             {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
                 sprintf(message, "Uci::parse_options : OwnBook false");
                 printlog(message);
 #endif
-                threadPool.set_useBook(false);
+                ownBook.set_useBook(false);
             }
         }
 
@@ -504,11 +497,11 @@ setoption name <id> [value <x>]
             std::string path;
             iss >> path;
 
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
             sprintf(message, "Uci::parse_options : BookPath (%s) ", path.c_str());
             printlog(message);
 #endif
-            Book.setPath(path);
+            ownBook.set_path(path);
         }
 
         else if (option_name == "SyzygyPath")
@@ -520,14 +513,14 @@ setoption name <id> [value <x>]
 
             if (path != "<empty>" && !path.empty())
             {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
                 sprintf(message, "Uci::parse_options : SyzygyPath (%s) ", path.c_str());
                 printlog(message);
 #endif
                 tb_init(path.data());
 
                 // only use TB if loading was successful
-                UseSyzygy = (TB_LARGEST > 0);
+                threadPool.set_useSyzygy(TB_LARGEST > 0);
             }
         }
     }
@@ -567,7 +560,9 @@ void Uci::go_run(const std::string& abc, const std::string& fen, int dmax, int t
         "2rqr3/pb5Q/4p1p1/1P1p2k1/3P4/2N5/PP6/1K2R3 w - - 0 28 ";
     //"2rBrb2/3k1p2/1Q4p1/4P3/3n1P1p/2P4P/P6P/1K1R4 w - - 0 39";
 
-    Transtable.clear();
+    transpositionTable.clear();
+    threadPool.reset();
+
     // utiliser setoption name Clear Hash
     // permet de controler l'utilisation de la table
 
@@ -649,7 +644,7 @@ void Uci::go_bench(int dmax, int tmax)
         return;
     }
 
-    threadPool.set_useBook(false);
+    ownBook.set_useBook(false);
     threadPool.set_logUci(false);
 
     //-------------------------------------------------
@@ -765,9 +760,8 @@ void Uci::go_bench(int dmax, int tmax)
 //-------------------------------------------------------------
 bool Uci::go_tactics(const std::string& line, int dmax, int tmax, U64& total_nodes, U64& total_time, int& total_depths, bool& found_am)
 {
-    Transtable.clear();
-    Transtable.clear_pawn_table();
-    Transtable.clear_eval_table();
+    transpositionTable.clear();
+    threadPool.reset();
 
     uci_board.set_fen(line, true);
 

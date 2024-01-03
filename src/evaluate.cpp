@@ -1,8 +1,6 @@
-#include <iostream>
 #include "Board.h"
 #include "defines.h"
 #include "evaluate.h"
-#include "TranspositionTable.h"
 
 //==========================================
 //! \brief  Evaluation de la position
@@ -13,13 +11,6 @@ template<bool Mode>
     int gamePhase = 0;
     int mgScore;
     int egScore;
-
-    // L'évaluation est-elle en cache ?
-#ifdef USE_CACHE
-    int hashed;
-    if (Transtable.probe_evaluation(hash, side_to_move, hashed) == true)
-        return hashed; // + Tempo;
-#endif
 
     // nullité
     // voir le code de Sjeng (aussi Fruit-Mora), qui comporte un test s'il reste des pions
@@ -65,9 +56,6 @@ template<bool Mode>
 
 //    if (eval_24 != eval_256)
 //   printf("phase = %f %f : eval = %f %f \n", phase_24, phase_256, eval_24, eval_256);
-
-    // Mise en cache de l'évaluation
-    Transtable.store_evaluation(hash, eval_256);
 
     //     printf("side=%d : mgp = %d ; egp = %d : s = %d \n", side_to_move, mgPhase, egPhase, score);
 

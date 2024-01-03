@@ -28,11 +28,14 @@
 //http://www.talkchess.com/forum3/viewtopic.php?f=2&t=68311
 
 //  Valeur des pièces
-constexpr Score meg_value[7] = {
+constexpr Score meg_value[N_PIECES] = {
     0, S(P_MG, P_EG), S(N_MG, N_EG), S(B_MG, B_EG), S(R_MG, R_EG), S(Q_MG, Q_EG), 0
 };
-constexpr Score mg_value[7] = {
+constexpr Score mg_value[N_PIECES] = {
     0, P_MG, N_MG, B_MG, R_MG, Q_MG, 0
+};
+constexpr Score eg_value[N_PIECES] = {
+    0, P_EG, N_EG, B_EG, R_EG, Q_EG, 0
 };
 
 //  Bonus positionnel des pièces

@@ -1,6 +1,6 @@
 #include "Board.h"
 #include "bitmask.h"
-#include "MoveGen.h"
+#include "Attacks.h"
 #include "Square.h"
 
 // isolated pawn masks [square]
@@ -137,7 +137,7 @@ void Board::init_bitmasks()
             }
         }
 
-        ring ^= MoveGen::king_moves(sq);
+        ring ^= Attacks::king_moves(sq);
         ring ^= (uint64_t(1) << sq);
 
         outer_kingring[sq] = ring;

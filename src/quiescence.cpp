@@ -1,6 +1,5 @@
 #include "Search.h"
 #include "MovePicker.h"
-#include "OrderingInfo.h"
 #include "Move.h"
 
 //=============================================================
@@ -12,21 +11,26 @@ int Search::quiescence(int ply, int alpha, int beta, ThreadData* td)
 {
     assert(beta > alpha);
 
+    SearchInfo* si = &td->info;
+
     //  Time-out
-    if (stopped || check_limits(td))
+    if (td->stopped || check_limits(td))
     {
-        stopped = true;
+        td->stopped = true;
         return 0;
     }
+
 
     // Update node count and selective depth
     td->nodes++;
     if (ply > td->seldepth)
         td->seldepth = ply;
 
+
     // partie nulle ?
     if(board.is_draw(ply))
         return CONTEMPT;
+
 
     // profondeur de recherche max atteinte
     // prevent overflows
@@ -34,18 +38,18 @@ int Search::quiescence(int ply, int alpha, int beta, ThreadData* td)
     if (ply >= MAX_PLY - 1)
         return in_check ? 0 : board.evaluate<true>();
 
+
     // partie trop longue
     if (board.gamemove_counter >= MAX_HIST - 1)
         return board.evaluate<true>();
 
+
     int  best_score;
     int  score;
 
-     MoveList move_list;
-
     // stand pat
 
-     if (!in_check)
+    if (!in_check)
     {
         // you do not allow the side to move to stand pat if the side to move is in check.
         best_score = board.evaluate<true>();
@@ -59,42 +63,35 @@ int Search::quiescence(int ply, int alpha, int beta, ThreadData* td)
         // notre position. On continue à chercher.
         if (best_score > alpha)
             alpha = best_score;
-
-        board.legal_captures<C>(move_list);
     }
     else
     {
         best_score = -MATE + ply; // idée de Koivisto
-        board.legal_evasions<C>(move_list);
     }
-
-    MovePicker movePicker(ply, 0, &my_orderingInfo, &board, &move_list);
+    
     MOVE move;
+    MovePicker movePicker(&board, si, Move::MOVE_NONE, Move::MOVE_NONE, Move::MOVE_NONE, true, 0);
 
     // Boucle sur tous les coups
-    while (movePicker.hasNext())
+    while ((move = movePicker.next_move()) != Move::MOVE_NONE)
     {
-        move = movePicker.getNext();
-
         // Prune des prises inintéressantes
-        if (!in_check && board.fast_see(move, 0) == false)
-            continue;
+        if (!in_check && movePicker.get_stage() > STAGE_GOOD_NOISY)
+            break;
 
         board.make_move<C>(move);
         score = -quiescence<~C>(ply+1, -beta, -alpha, td);
         board.undo_move<C>();
 
-        if (stopped)
+        if (td->stopped)
             return 0;
 
         // try for an early cutoff:
         if(score >= beta)
         {
             /* we have a cutoff, so update our killers: */
-            //TODO : utiliser killer ici ?
-            //TODO promotion ? prise-enpassant ?
             if (Move::is_capturing(move) == false)
-                my_orderingInfo.updateKillers(ply, move);
+                si->updateKillers(ply, move);
             return score;
         }
 

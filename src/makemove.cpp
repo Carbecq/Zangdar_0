@@ -4,7 +4,7 @@
 #include "Move.h"
 
 #ifndef NDEBUG
-#include "MoveGen.h"
+#include "Attacks.h"
 #endif
 
 /* This is the castle_mask array. We can use it to determine
@@ -65,7 +65,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
 
 // La prise en passant n'est valable que tout de suite
 // Il faut donc la supprimer
-#ifdef HASH
+#if defined USE_HASH
     if (ep_square != NO_SQUARE) {
         hash ^= ep_key[ep_square];
     }
@@ -79,7 +79,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
         x_king[C] = dest;
 
 // Droit au roque, remove ancient value
-#ifdef HASH
+#if defined USE_HASH
     hash ^= castle_key[castling];
 #endif
 
@@ -87,7 +87,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
     castling = castling & castle_mask[from] & castle_mask[dest];
 
 // Droit au roque; add new value
-#ifdef HASH
+#if defined USE_HASH
     hash ^= castle_key[castling];
 #endif
 
@@ -114,7 +114,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
             cpiece[from] = PieceType::NO_TYPE;
             cpiece[dest] = piece;
 
-#ifdef HASH
+#if defined USE_HASH
             hash ^= piece_key[C][piece][from] ^ piece_key[C][piece][dest];
 #endif
 
@@ -124,7 +124,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
             if (piece == PieceType::Pawn)
             {
                 halfmove_counter = 0;
-#ifdef HASH
+#if defined USE_HASH
                 pawn_hash ^= piece_key[C][PieceType::Pawn][from] ^ piece_key[C][PieceType::Pawn][dest];
 #endif
             }
@@ -155,7 +155,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
                 cpiece[from] = PieceType::NO_TYPE;
                 cpiece[dest] = promo;
 
-#ifdef HASH
+#if defined USE_HASH
                 hash ^= piece_key[C][piece][from];
                 hash ^= piece_key[C][promo][dest];
                 hash ^= piece_key[them][captured][dest];
@@ -185,7 +185,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
                 cpiece[from] = PieceType::NO_TYPE;
                 cpiece[dest] = piece;
 
-#ifdef HASH
+#if defined USE_HASH
                 hash ^= piece_key[C][piece][from] ^ piece_key[C][piece][dest];
 
                 if (piece == PieceType::Pawn)
@@ -199,7 +199,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
 
                 halfmove_counter = 0;
 
-#ifdef HASH
+#if defined USE_HASH
                 hash ^= piece_key[them][captured][dest];
 
                 if (captured == PieceType::Pawn)
@@ -225,7 +225,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
             cpiece[from] = PieceType::NO_TYPE;
             cpiece[dest] = promo;
 
-#ifdef HASH
+#if defined USE_HASH
             hash ^= piece_key[C][piece][from];
             hash ^= piece_key[C][promo][dest];
 
@@ -262,7 +262,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
             cpiece[from] = PieceType::NO_TYPE;
             cpiece[dest] = piece;
 
-#ifdef HASH
+#if defined USE_HASH
             hash      ^= piece_key[C][PieceType::Pawn][from] ^ piece_key[C][PieceType::Pawn][dest];
             pawn_hash ^= piece_key[C][PieceType::Pawn][from] ^ piece_key[C][PieceType::Pawn][dest];
 #endif
@@ -276,7 +276,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
             halfmove_counter = 0;
             ep_square = (C == Color::WHITE) ? Square::south(dest) : Square::north(dest);
 
-#ifdef HASH
+#if defined USE_HASH
             hash ^= ep_key[ep_square];
 #endif
         }
@@ -292,7 +292,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
             cpiece[from] = PieceType::NO_TYPE;
             cpiece[dest] = PieceType::Pawn;
 
-#ifdef HASH
+#if defined USE_HASH
             hash      ^= piece_key[C][PieceType::Pawn][from] ^ piece_key[C][PieceType::Pawn][dest];
             pawn_hash ^= piece_key[C][PieceType::Pawn][from] ^ piece_key[C][PieceType::Pawn][dest];
 #endif
@@ -313,7 +313,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
                 flip(colorPiecesBB[Color::BLACK],   Square::south(dest));
                 cpiece[Square::south(dest)] = PieceType::NO_TYPE;
 
-#ifdef HASH
+#if defined USE_HASH
                 hash      ^= piece_key[them][PieceType::Pawn][Square::south(dest)];
                 pawn_hash ^= piece_key[them][PieceType::Pawn][Square::south(dest)];
 #endif
@@ -324,7 +324,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
                 flip(colorPiecesBB[Color::WHITE],   Square::north(dest));
                 cpiece[Square::north(dest)] = PieceType::NO_TYPE;
 
-#ifdef HASH
+#if defined USE_HASH
                 hash      ^= piece_key[them][PieceType::Pawn][Square::north(dest)];
                 pawn_hash ^= piece_key[them][PieceType::Pawn][Square::north(dest)];
 #endif
@@ -358,7 +358,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
                 assert(cpiece[from] == PieceType::NO_TYPE);
                 assert(cpiece[dest] == PieceType::King);
 
-#ifdef HASH
+#if defined USE_HASH
                 hash ^= piece_key[C][piece][from];
                 hash ^= piece_key[C][piece][dest];
                 hash ^= piece_key[C][PieceType::Rook][ksc_castle_rook_from[C]];
@@ -399,7 +399,7 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
                 assert(cpiece[from] == PieceType::NO_TYPE);
                 assert(cpiece[dest] == PieceType::King);
 
-#ifdef HASH
+#if defined USE_HASH
                 hash ^= piece_key[C][piece][from];
                 hash ^= piece_key[C][piece][dest];
                 hash ^= piece_key[C][PieceType::Rook][qsc_castle_rook_from[C]];
@@ -425,10 +425,10 @@ template <Color C> constexpr void Board::make_move(const MOVE move) noexcept
 
     gamemove_counter++;
 
-#ifdef HASH
+#if defined USE_HASH
     hash ^= side_key;
 
-#ifdef DEBUG_HASH
+#if defined DEBUG_HASH
     U64 hash_1, hash_2;
         calculate_hash(hash_1, hash_2);
 
@@ -466,7 +466,7 @@ template <Color C> constexpr void Board::make_nullmove() noexcept
 
 // La prise en passant n'est valable que tout de suite
 // Il faut donc la supprimer
-#ifdef HASH
+#if defined USE_HASH
     if (ep_square != NO_SQUARE) {
         hash ^= ep_key[ep_square];
     }
@@ -486,7 +486,7 @@ template <Color C> constexpr void Board::make_nullmove() noexcept
 
     gamemove_counter++;
 
-#ifdef HASH
+#if defined USE_HASH
     hash ^= side_key;
 #endif
 

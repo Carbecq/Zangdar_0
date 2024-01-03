@@ -1,24 +1,17 @@
+#include <cmath>
+#include <iomanip>
 #include "Search.h"
 #include "ThreadPool.h"
 #include "Move.h"
-#include <iomanip>
-#include <locale>
-#include <thread>
-#include <cmath>
+#include "TranspositionTable.h"
 
-extern ThreadPool threadPool;
 
 //=============================================
 //! \brief  Constructeur
 //---------------------------------------------
-Search::Search(const Board &m_board, const Timer &m_timer, OrderingInfo &m_info, bool m_log)
-    : stopped(false)
-    , board(m_board)
-    , timer(m_timer)
-    , logUci(m_log)
-    , my_orderingInfo(m_info)
+Search::Search()
 {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[100];
     sprintf(message, "Search constructeur");
     printlog(message);
@@ -54,7 +47,7 @@ void Search::show_uci_result(const ThreadData* td, U64 elapsed, PVariation& pv) 
 
 // en mode UCI, il ne faut pas mettre les points de séparateur,
 // sinon Arena n'affiche pas correctement le nombre de nodes
-#ifdef PRETTY
+#if defined USE_PRETTY
     std::cout.imbue(std::locale(std::locale::classic(), new MyNumPunct));
     int l = 12;
 #endif
@@ -68,13 +61,15 @@ void Search::show_uci_result(const ThreadData* td, U64 elapsed, PVariation& pv) 
      */
 
     //collect info about nodes from all Threads
-    U64 all_nodes = threadPool.get_all_nodes();
+    U64 all_nodes  = threadPool.get_all_nodes();
+    U64 all_tbhits = threadPool.get_all_tbhits();
+    int hash_full  = transpositionTable.hash_full();
 
     std::cout << "info ";
 
-#ifdef PRETTY
-    std::cout << " depth "    << std::setw(2) << td->best_depth
-              << " seldepth " << std::setw(2) << td->seldepth
+#if defined USE_PRETTY
+    std::cout << " depth "    << std::setw(2) << td->best_depth                     // depth <x> search depth in plies
+              << " seldepth " << std::setw(2) << td->seldepth                       // seldepth <x> selective search depth in plies
 #else
     std::cout << " depth "    << td->best_depth
               << " seldepth " << td->seldepth
@@ -84,17 +79,23 @@ void Search::show_uci_result(const ThreadData* td, U64 elapsed, PVariation& pv) 
 // nodes    : noeuds calculés
 // nps      : nodes per second searched
 
-#ifdef PRETTY
-              << " time "  << std::setw(6) << elapsed
-              << " nodes " << std::setw(l) << all_nodes
-              << " nps "   << std::setw(7) << all_nodes * 1000 / elapsed;
+#if defined USE_PRETTY
+              << " time "       << std::setw(6) << elapsed                          // time <x> the time searched in ms
+              << " nodes "      << std::setw(l) << all_nodes
+              << " nps "        << std::setw(7) << all_nodes * 1000 / elapsed       // nps <x> x nodes per second searched,
+              << " tbhits "     << all_tbhits                                       // tbhits <x> x positions where found in the endgame table bases
+              << " hashfull "   << std::setw(5) << hash_full;                       // hashfull <x> the hash is x permill full,
 #else
-              << " time " << elapsed << " nodes " << all_nodes << " nps " << all_nodes * 1000 / elapsed ;
+              << " time "       << elapsed
+              << " nodes "      << all_nodes
+              << " nps "        << all_nodes * 1000 / elapsed
+              << " tbhits "     << all_tbhits
+              << " hashfull "   << hash_full;
 #endif
 
     if (td->best_score >= MATE_IN_X)
     {
-        std::cout << " score mate " << (MATE - td->best_score) / 2 + 1;
+        std::cout << " score mate " << (MATE - td->best_score) / 2 + 1;             // score mate <y> mate in y moves, not plies.
     }
     else if (td->best_score <= -MATE_IN_X)
     {
@@ -103,8 +104,8 @@ void Search::show_uci_result(const ThreadData* td, U64 elapsed, PVariation& pv) 
     else
     {
 
-#ifdef PRETTY
-        std::cout << " score cp " << std::right << std::setw(4) << td->best_score;
+#if defined USE_PRETTY
+        std::cout << " score cp " << std::right << std::setw(5) << td->best_score;  // score cp <x> the score from the engine's point of view in centipawns.
 #else
         std::cout << " score cp " << td->best_score;
 #endif
@@ -163,18 +164,10 @@ bool Search::check_limits(const ThreadData* td) const
 {
     // Every 4096 nodes, check if our time has expired.
     // On ne teste pas si nodes=0
-    if ((td->nodes & 4095) == 4095)
-        return timer.checkLimits();
-    else
-        return false;
+
+    return((td->nodes & 4095) == 4095
+            && td->index == 0
+            && timer.finishOnThisMove());
+
 }
 
-//-----------------------------------------------------
-//! \brief Commande UCI : stop
-//-----------------------------------------------------
-void Search::stop()
-{
-    //    printf(">>>>>>> SEARCH STOP recue \n");fflush(stdout);
-
-    stopped = true;
-}

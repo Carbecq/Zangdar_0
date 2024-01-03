@@ -291,7 +291,7 @@ void Board::set_fen(const std::string &fen, bool logTactics) noexcept
 //-----------------------------------------
 
 // Calculate hash
-#ifdef HASH
+#if defined USE_HASH
     calculate_hash(hash, pawn_hash);
 #endif
 
@@ -534,7 +534,7 @@ void Board::mirror_fen(const std::string& fen, bool logTactics)
 //-----------------------------------------
 
 // Calculate hash
-#ifdef HASH
+#if defined USE_HASH
     calculate_hash(hash, pawn_hash);
 #endif
 

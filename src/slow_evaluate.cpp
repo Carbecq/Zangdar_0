@@ -1,7 +1,7 @@
 #include "defines.h"
 #include "Board.h"
 #include "evaluate.h"
-#include "MoveGen.h"
+#include "Attacks.h"
 #include "types.h"
 #include "TranspositionTable.h"
 #include "Square.h"
@@ -20,7 +20,7 @@ extern Bitboard outer_kingring[64];
 //---------------------------------------------------------------------------
 Score Board::slow_evaluate(int& phase)
 {
-    Score score = 0;
+    Score eval = 0;
     EvalInfo ei;
 
     // nullité
@@ -73,8 +73,8 @@ Score Board::slow_evaluate(int& phase)
 
     // Sécurité du roi
     const Bitboard auxi[2] = {
-        MoveGen::king_moves(x_king[BLACK]),
-        MoveGen::king_moves(x_king[WHITE])
+        Attacks::king_moves(x_king[BLACK]),
+        Attacks::king_moves(x_king[WHITE])
     };
 
     // Bitboard des cases entourant le roi ennemi
@@ -90,57 +90,58 @@ Score Board::slow_evaluate(int& phase)
     //  Evaluation des pions
     //--------------------------------
 
-#ifdef USE_CACHE
-    Score pscore = 0;
+#if defined USE_PAWN_CACHE
+
+    Score pawn_eval = 0;
     // Recherche de la position des pions dans le cache
-    if (Transtable.probe_pawn_cache(pawn_hash, pscore) == true)
+    if (transpositionTable.probe_pawn_table(pawn_hash, pawn_eval) == true)
     {
         // La table de pions contient la position,
         // On récupère le score de la table
-        score += pscore;
+        eval += pawn_eval;
     }
     else
     {
         // La table de pions ne contient pas la position,
         // on calcule le score, et on le stocke
-        pscore += evaluate_pawns<WHITE>(ei);
-        pscore -= evaluate_pawns<BLACK>(ei);
-        Transtable.store_pawn_cache(pawn_hash, pscore);
-        score += pscore;
+        pawn_eval += evaluate_pawns<WHITE>(ei);
+        pawn_eval -= evaluate_pawns<BLACK>(ei);
+        transpositionTable.store_pawn_table(pawn_hash, pawn_eval);
+        eval += pawn_eval;
     }
 #else
-    score += evaluate_pawns<WHITE>(UsPawnsBB[WHITE], OtherPawnsBB[WHITE]);
-    score -= evaluate_pawns<BLACK>(UsPawnsBB[BLACK], OtherPawnsBB[BLACK]);
+    score += evaluate_pawns<WHITE>(ei);
+    score -= evaluate_pawns<BLACK>(ei);
 #endif
 
     //--------------------------------
     // Evaluation des pieces
     //--------------------------------
 
-    score += evaluate_knights<WHITE>(ei);
-    score -= evaluate_knights<BLACK>(ei);
+    eval += evaluate_knights<WHITE>(ei);
+    eval -= evaluate_knights<BLACK>(ei);
 
-    score += evaluate_bishops<WHITE>(ei);
-    score -= evaluate_bishops<BLACK>(ei);
+    eval += evaluate_bishops<WHITE>(ei);
+    eval -= evaluate_bishops<BLACK>(ei);
 
-    score += evaluate_rooks<WHITE>(ei);
-    score -= evaluate_rooks<BLACK>(ei);
+    eval += evaluate_rooks<WHITE>(ei);
+    eval -= evaluate_rooks<BLACK>(ei);
 
-    score += evaluate_queens<WHITE>(ei);
-    score -= evaluate_queens<BLACK>(ei);
+    eval += evaluate_queens<WHITE>(ei);
+    eval -= evaluate_queens<BLACK>(ei);
 
-    score += evaluate_king<WHITE>(ei);
-    score -= evaluate_king<BLACK>(ei);
+    eval += evaluate_king<WHITE>(ei);
+    eval -= evaluate_king<BLACK>(ei);
 
     //--------------------------------
     // Evaluation de la sécurité du roi
     //--------------------------------
 
-    score += evaluate_safety<WHITE>(ei);
-    score -= evaluate_safety<BLACK>(ei);
+    eval += evaluate_safety<WHITE>(ei);
+    eval -= evaluate_safety<BLACK>(ei);
 
     phase = ei.phase;
-    return score;
+    return eval;
 }
 
 //=================================================================
@@ -150,32 +151,32 @@ template<Color C>
 Score Board::evaluate_pawns(EvalInfo& ei)
 {
     int sq, sqpos;
-    Score score = 0;
+    Score eval = 0;
 
     Bitboard pawns = ei.pawns[C];
 
     // Pions doublés
     // des pions doublés désignent deux pions de la même couleur sur une même colonne.
-#ifdef DEBUG_EVAL
+#if defined DEBUG_EVAL
             printf("Le camp %s possède %d pions doublés \n", side_name[Us].c_str(), Bcount(UsPawnsBB & north(UsPawnsBB)));
 #endif
-    score += PawnDoubled * Bcount(pawns & north(pawns));
+    eval += PawnDoubled * Bcount(pawns & north(pawns));
 
     // Pions supportés par un autre pion
-#ifdef DEBUG_EVAL
+#if defined DEBUG_EVAL
         printf("Le camp %s possède %d pions supportés par un autre pion \n", side_name[Us].c_str(), Bcount(UsPawnsBB & all_pawn_attacks<Us>(UsPawnsBB)));
 #endif
-    score += PawnSupport * Bcount(pawns & all_pawn_attacks<C>(pawns));
+    eval += PawnSupport * Bcount(pawns & all_pawn_attacks<C>(pawns));
 
     Bitboard bb = ei.pawns[C];
     while (bb)
     {
         sq     = next_square(bb);                   // case où est la pièce
         sqpos  = Square::flip(C, sq);              // case inversée pour les tables
-        score += meg_value[PieceType::Pawn];        // score matériel
-        score += meg_pawn_table[sqpos];             // score positionnel
+        eval += meg_value[PieceType::Pawn];        // score matériel
+        eval += meg_pawn_table[sqpos];             // score positionnel
 
-#ifdef DEBUG_EVAL
+#if defined DEBUG_EVAL
             //            printf("le pion %s (%d) sur la case %s a une valeur MG de %d \n", side_name[Us].c_str(), Us, square_name[sq].c_str(), mg_pawn_table[sqpos]);
 #endif
         // Pion isolé
@@ -184,10 +185,10 @@ Score Board::evaluate_pawns(EvalInfo& ei)
         //  C'est souvent une faiblesse en finale, car il est difficile à défendre.
         if ((pawns & AdjacentFilesMask64[sq]) == 0)
         {
-#ifdef DEBUG_EVAL
+#if defined DEBUG_EVAL
             printf("le pion %s sur la case %s est isolé \n", side_name[Us].c_str(), square_name[sq].c_str());
 #endif
-            score += PawnIsolated;
+            eval += PawnIsolated;
         }
 
         // Pion passé
@@ -195,10 +196,10 @@ Score Board::evaluate_pawns(EvalInfo& ei)
         //  c'est-à-dire qu'il n'y a pas de pion adverse devant lui, ni sur la même colonne, ni sur une colonne adjacente
         if ((passed_pawn_mask[C][sq] & ei.pawns[~C]) == 0)
         {
-#ifdef DEBUG_EVAL
+#if defined DEBUG_EVAL
             printf("le pion %s sur la case %s est passé \n", side_name[Us].c_str(), square_name[sq].c_str());
 #endif
-            score += PawnPassed[Square::rank(sqpos)];
+            eval += PawnPassed[Square::rank(sqpos)];
         }
 
         // Pion passé protégé
@@ -221,7 +222,7 @@ Score Board::evaluate_pawns(EvalInfo& ei)
             //        }
     }
 
-    return score;
+    return eval;
 }
 
 //=================================================================
@@ -232,7 +233,7 @@ Score Board::evaluate_knights(EvalInfo& ei)
 {
     int sq, sqpos;
     int count;
-    Score score = 0;
+    Score eval = 0;
 
     Bitboard bb = ei.knights[C];
     ei.phase += Bcount(bb);
@@ -241,17 +242,45 @@ Score Board::evaluate_knights(EvalInfo& ei)
     {
         sq     = next_square(bb);                   // case où est la pièce
         sqpos  = Square::flip(C, sq);              // case inversée pour les tables
-        score += meg_value[PieceType::Knight];      // score matériel
-        score += meg_knight_table[sqpos];           // score positionnel
+        eval += meg_value[PieceType::Knight];      // score matériel
+        eval += meg_knight_table[sqpos];           // score positionnel
 
         // mobilité
-        Bitboard mobilityBB = MoveGen::knight_moves(sq) & ei.mobilityArea[C];
+        Bitboard mobilityBB = Attacks::knight_moves(sq) & ei.mobilityArea[C];
         count = Bcount(mobilityBB);
-        score += KnightMobility[count];
+        eval += KnightMobility[count];
 
+        // Un avant-poste est une case sur laquelle votre pièce ne peut pas
+        // être attaquée par un pion adverse.
+        // L’avant-poste est particulièrement efficace quand il est défendu
+        // par un de vos propres pions et qu’il permet de contrôler des cases clefs
+        // de la position adverse.
+        // Les cavaliers sont les pièces qui profitent le mieux des avant-postes.
+
+        // Apply a bonus if the knight is on an outpost square, and cannot be attacked
+        // by an enemy pawn. Increase the bonus if one of our pawns supports the knight.
+
+        // définition sujette à discussion ....
+#if 0
+        if ( (OutpostRanks[C] & (square_to_bit(sq))
+             && !(outpost_mask[C][sq] & ei.pawns[~C]) ) )
+        {
+            int defended = !!(ei.pawnAttacks[C] & square_to_bit(sq));
+
+
+            score += Score(KnightOutpost[defended]);
+#if defined DEBUG_EVAL
+            printf("le cavalier %s sur la case %s est sur un avant-poste défendu %d fois", side_name[Us].c_str(), square_name[sq].c_str(), defended);
+#endif
+            if (defended)
+                printf("le cavalier %s sur la case %s est sur un avant-poste défendu \n", side_name[C].c_str(), square_name[sq].c_str());
+            else
+                printf("le cavalier %s sur la case %s est sur un avant-poste non défendu \n", side_name[C].c_str(), square_name[sq].c_str());
+        }
+#endif
         //  attaques et échecs pour calculer la sécurité du roi
         int nbr_attacks = Bcount(mobilityBB & ei.enemyKingZone[C]);
-        int nbr_checks  = Bcount(mobilityBB & MoveGen::knight_moves(x_king[~C]));
+        int nbr_checks  = Bcount(mobilityBB & Attacks::knight_moves(x_king[~C]));
 
         if (nbr_attacks > 0 || nbr_checks > 0)
         {
@@ -259,7 +288,7 @@ Score Board::evaluate_knights(EvalInfo& ei)
             ei.attackPower[C] += nbr_attacks * AttackPower[PieceType::Knight] + nbr_checks * CheckPower[PieceType::Knight];
         }
     }
-    return score;
+    return eval;
 }
 
 //=================================================================
@@ -270,7 +299,7 @@ Score Board::evaluate_bishops(EvalInfo& ei)
 {
     int sq, sqpos;
     int count;
-    Score score = 0;
+    Score eval = 0;
     Bitboard bb = ei.bishops[C];
     ei.phase += Bcount(bb);
 
@@ -278,27 +307,27 @@ Score Board::evaluate_bishops(EvalInfo& ei)
     {
         // Paire de fous
         // On ne teste pas si les fous sont de couleur différente !
-#ifdef DEBUG_EVAL
+#if defined DEBUG_EVAL
             printf("Le camp %s possède la paire de fous \n", side_name[Us].c_str());
 #endif
-        score += BishopPair;
+        eval += BishopPair;
     }
 
     while (bb)
     {
         sq     = next_square(bb);                   // case où est la pièce
         sqpos  = Square::flip(C, sq);              // case inversée pour les tables
-        score += meg_value[PieceType::Bishop];      // score matériel
-        score += meg_bishop_table[sqpos];           // score positionnel
+        eval += meg_value[PieceType::Bishop];      // score matériel
+        eval += meg_bishop_table[sqpos];           // score positionnel
 
         // mobilité
         Bitboard mobilityBB = XRayBishopAttack<C>(sq) & ei.mobilityArea[C];
         count = Bcount(mobilityBB);
-        score += BishopMobility[count];
+        eval += BishopMobility[count];
 
         //  attaques et échecs pour calculer la sécurité du roi
         int nbr_attacks = Bcount(mobilityBB & ei.enemyKingZone[C]);
-        int nbr_checks  = Bcount(mobilityBB & MoveGen::bishop_moves(x_king[~C], ei.occupiedBB));
+        int nbr_checks  = Bcount(mobilityBB & Attacks::bishop_moves(x_king[~C], ei.occupiedBB));
 
         if (nbr_attacks > 0 || nbr_checks > 0)
         {
@@ -306,7 +335,7 @@ Score Board::evaluate_bishops(EvalInfo& ei)
             ei.attackPower[C] += nbr_attacks * AttackPower[PieceType::Bishop] + nbr_checks * CheckPower[PieceType::Bishop];
         }
     }
-    return score;
+    return eval;
 }
 
 //=================================================================
@@ -317,7 +346,7 @@ Score Board::evaluate_rooks(EvalInfo& ei)
 {
     int sq, sqpos;
     int count;
-    Score score = 0;
+    Score eval = 0;
 
     Bitboard bb = ei.rooks[C];
     ei.phase += 2*Bcount(bb);
@@ -326,17 +355,17 @@ Score Board::evaluate_rooks(EvalInfo& ei)
     {
         sq     = next_square(bb);                   // case où est la pièce
         sqpos  = Square::flip(C, sq);              // case inversée pour les tables
-        score += meg_value[PieceType::Rook];    // score matériel
-        score += meg_rook_table[sqpos];            // score positionnel
+        eval += meg_value[PieceType::Rook];    // score matériel
+        eval += meg_rook_table[sqpos];            // score positionnel
 
         // mobilité
         Bitboard mobilityBB = XRayRookAttack<C>(sq) & ei.mobilityArea[C];
         count = Bcount(mobilityBB);
-        score += RookMobility[count];
+        eval += RookMobility[count];
 
         //  attaques et échecs pour calculer la sécurité du roi
         int nbr_attacks = Bcount(mobilityBB & ei.enemyKingZone[C]);
-        int nbr_checks  = Bcount(mobilityBB & MoveGen::rook_moves(x_king[~C], ei.occupiedBB));
+        int nbr_checks  = Bcount(mobilityBB & Attacks::rook_moves(x_king[~C], ei.occupiedBB));
 
         if (nbr_attacks > 0 || nbr_checks > 0)
         {
@@ -347,25 +376,25 @@ Score Board::evaluate_rooks(EvalInfo& ei)
         // Colonnes ouvertes
         if (((ei.pawns[WHITE] | ei.pawns[BLACK]) & FileMask64[sq]) == 0) // pas de pion ami ou ennemi
         {
-#ifdef DEBUG_EVAL
+#if defined DEBUG_EVAL
                 printf("la tour %s sur la case %s est sur une colonne ouverte \n",
                        side_name[Us].c_str(), square_name[sq].c_str());
 #endif
-            score += RookOpenFile;
+            eval += RookOpenFile;
         }
 
         // Colonnes semi-ouvertes
         else if ((ei.pawns[C] & FileMask64[sq]) == 0) // pas de pion ami
         {
-#ifdef DEBUG_EVAL
+#if defined DEBUG_EVAL
                 printf("la tour %s sur la case %s est sur une colonne semi-ouverte \n",
                        side_name[Us].c_str(), square_name[sq].c_str());
 #endif
-            score += RookSemiOpenFile;
+            eval += RookSemiOpenFile;
         }
 
     }
-    return score;
+    return eval;
 }
 
 //=================================================================
@@ -376,7 +405,7 @@ Score Board::evaluate_queens(EvalInfo& ei)
 {
     int sq, sqpos;
     int count;
-    Score score = 0;
+    Score eval = 0;
     Bitboard bb = ei.queens[C];
     ei.phase += 4*Bcount(bb);
 
@@ -384,13 +413,13 @@ Score Board::evaluate_queens(EvalInfo& ei)
     {
         sq     = next_square(bb);                   // case où est la pièce
         sqpos  = Square::flip(C, sq);              // case inversée pour les tables
-        score += meg_value[PieceType::Queen];    // score matériel
-        score += meg_queen_table[sqpos];            // score positionnel
+        eval += meg_value[PieceType::Queen];    // score matériel
+        eval += meg_queen_table[sqpos];            // score positionnel
 
         // mobilité
         Bitboard mobilityBB = XRayQueenAttack<C>(sq) & ei.mobilityArea[C];
         count = Bcount(mobilityBB);
-        score += QueenMobility[count];
+        eval += QueenMobility[count];
 
         //  attaques et échecs pour calculer la sécurité du roi
 
@@ -400,7 +429,7 @@ Score Board::evaluate_queens(EvalInfo& ei)
 
         // nbr_checks = nombre de cases d'où la dame peut faire échec
         //          à noter que seules les cases de la mobilité comptent
-        int nbr_checks     = Bcount(mobilityBB & MoveGen::queen_moves(x_king[~C], ei.occupiedBB));
+        int nbr_checks     = Bcount(mobilityBB & Attacks::queen_moves(x_king[~C], ei.occupiedBB));
 
         if (nbr_attacks > 0 || nbr_checks > 0)
         {
@@ -412,24 +441,24 @@ Score Board::evaluate_queens(EvalInfo& ei)
         // Colonnes ouvertes
         if (((ei.pawns[WHITE] | ei.pawns[BLACK]) & FileMask64[sq]) == 0) // pas de pion ami ou ennemi
         {
-#ifdef DEBUG_EVAL
+#if defined DEBUG_EVAL
             printf("la Dame %s sur la case %s est sur une colonne ouverte \n",
                    side_name[Us].c_str(), square_name[sq].c_str());
 #endif
-            score += QueenOpenFile;
+            eval += QueenOpenFile;
         }
 
         // Colonnes semi-ouvertes
         else if ((ei.pawns[C] & FileMask64[sq]) == 0) // pas de pion ami
         {
-#ifdef DEBUG_EVAL
+#if defined DEBUG_EVAL
             printf("la dame %s sur la case %s est sur une colonne semi-ouverte \n",
                    side_name[Us].c_str(), square_name[sq].c_str());
 #endif
-            score += QueenSemiOpenFile;
+            eval += QueenSemiOpenFile;
         }
     }
-    return score;
+    return eval;
 }
 
 //=================================================================
@@ -439,22 +468,22 @@ template<Color C>
 Score Board::evaluate_king(EvalInfo& ei)
 {
     int sq, sqpos;
-    Score score = 0;
+    Score eval = 0;
     sq     = x_king[C];
     sqpos  = Square::flip(C, sq);              // case inversée pour les tables
-    score += meg_value[PieceType::King];       // score matériel
-    score += meg_king_table[sqpos];            // score positionnel
+    eval += meg_value[PieceType::King];       // score matériel
+    eval += meg_king_table[sqpos];            // score positionnel
 
     // sécurité du roi
     // On compte le nombre de case d'où on peut attaquer le roi (sauf cavalier)
     Bitboard SafeLine = RankMask8[Square::relative_rank<C>(RANK_1)];
-    int count = Bcount(~SafeLine & MoveGen::queen_moves(sq, colorPiecesBB[C] | typePiecesBB[PieceType::Pawn]));
-    score += KingLineDanger[count];
+    int count = Bcount(~SafeLine & Attacks::queen_moves(sq, colorPiecesBB[C] | typePiecesBB[PieceType::Pawn]));
+    eval += KingLineDanger[count];
 
     // Add to enemy's attack power based on open lines
     ei.attackPower[~C] += (count - 3) * 8;
 
-    return score;
+    return eval;
 }
 
 //=================================================================
@@ -463,9 +492,9 @@ Score Board::evaluate_king(EvalInfo& ei)
 template<Color C>
 Score Board::evaluate_safety(const EvalInfo& ei)
 {
-    int score = ei.attackPower[C] * CountModifier[std::min(7, ei.attackCount[C])] / 100;
+    int eval = ei.attackPower[C] * CountModifier[std::min(7, ei.attackCount[C])] / 100;
 
-    return S(score, 0);
+    return S(eval, 0);
 }
 
 

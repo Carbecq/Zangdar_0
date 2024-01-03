@@ -1,21 +1,17 @@
-#include <iostream>
 #include "Uci.h"
-#include "MoveGen.h"
-#include "M42.h"
+#include "Attacks.h"
 #include "TranspositionTable.h"
-#include "PolyBook.h"
 #include "ThreadPool.h"
+#include "PolyBook.h"
 
 // Globals
-TranspositionTable  Transtable(DEFAULT_HASH_SIZE);
-bool                UseSyzygy = false;
-PolyBook            Book;
-ThreadPool          threadPool;
+TranspositionTable  transpositionTable(HASH_SIZE);
+PolyBook            ownBook;
+ThreadPool          threadPool(1, false, true);
 
 int main(int argCount, char* argValue[])
 {
-    MoveGen::calculate_squares_between();
-    M42::init();
+    Attacks::init();
 
     Uci* uci = new Uci();
     uci->run();

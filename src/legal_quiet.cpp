@@ -1,20 +1,22 @@
 #include "Board.h"
-#include "bitboard.h"
+#include "Board.h"
 #include "Attacks.h"
-#include "Square.h"
 #include "Move.h"
 
 constexpr int PUSH[] = {8, -8};
 
 
+
 //=================================================================
-//! \brief  Génération de tous les coups légaux, échappant à un échec
+//! \brief  Génération de tous les coups "quiet"
+//!             + ni capture
+//!             + ni promotion
 //! \param  ml  Liste des coups dans laquelle on va stocker les coups
 //!
 //! algorithme de Mperft
 //-----------------------------------------------------------------
 template <Color C>
-constexpr void Board::legal_evasions(MoveList& ml) noexcept
+constexpr void Board::legal_quiet(MoveList& ml) noexcept
 {
     constexpr Color O = ~C;
     const int   K = x_king[C];
@@ -69,12 +71,11 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
     //-----------------------------------------------------------------------------------------
     const Bitboard unpinnedBB = colorPiecesBB[C] & ~pinnedBB;
 
-    constexpr int pawn_left = PUSH[C] - 1;
-    constexpr int pawn_right = PUSH[C] + 1;
     constexpr int pawn_push = PUSH[C];
+    const int *dir = allmask[K].direction;
     Bitboard pieceBB;
     Bitboard attackBB;
-    int from, to, ep;
+    int from, to, d;
     int x_checker = NO_SQUARE;
 
     //-------------------------------------------------------------------------------------------
@@ -95,54 +96,117 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
             emptyBB = enemyBB  = 0;
         }
     }
-
-    if (ep_square!=NO_SQUARE && (!checkersBB || x_checker == ep_square - pawn_push))
+    else
     {
-        // file : a...h
+        // not in check: castling & pinned pieces moves
 
-        to = ep_square;             // e3 = 20
-        ep = to - pawn_push;        // 20 - (-8)  noirs = 28 = e4
-        from = ep - 1;              // 28 - 1 = 27 = d4
-
-        Bitboard our_pawns = pieces_cp<C, PieceType::Pawn>();
-        if (Square::file(to) > 0 && our_pawns & square_to_bit(from) )
+        // castling
+        if (can_castle_k<C>())
         {
-            pieceBB = occupiedBB ^ square_to_bit(from) ^ square_to_bit(ep) ^ square_to_bit(to);
+            /*  Attacks::squares_between(ksq, ksc_castle_king_to[us])   : case F1
+                 *  square_to_bit(ksc_castle_king_to[us])                   : case G1
+                 */
+            const Bitboard blockers         = occupied() ^ square_to_bit(K) ^ square_to_bit(ksc_castle_rook_from[C]);
+            const Bitboard king_path        = (Attacks::squares_between(K, ksc_castle_king_to[C])  |
+                                        square_to_bit(ksc_castle_king_to[C])) ;
+            const bool     king_path_clear  = Bempty(king_path & blockers);
+            const Bitboard rook_path        = Attacks::squares_between(ksc_castle_rook_to[C], ksc_castle_rook_from[C])
+                                       | square_to_bit(ksc_castle_rook_to[C]);
+            const bool     rook_path_clear  = Bempty(rook_path & blockers);
 
-            if ( !(Attacks::bishop_moves(K, pieceBB) & bq & colorPiecesBB[O]) &&
-                !(Attacks::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
+            if (king_path_clear && rook_path_clear && !(squares_attacked<O>() & king_path))
+                add_quiet_move(ml, K, ksc_castle_king_to[C], PieceType::King, Move::FLAG_CASTLE);
+        }
+        if (can_castle_q<C>())
+        {
+            const Bitboard blockers         = occupied() ^ square_to_bit(K) ^ square_to_bit(qsc_castle_rook_from[C]);
+            const Bitboard king_path        = (Attacks::squares_between(K, qsc_castle_king_to[C]) |
+                                        square_to_bit(qsc_castle_king_to[C]));
+            const bool     king_path_clear  = Bempty(king_path & blockers);
+            const Bitboard rook_path        = Attacks::squares_between(qsc_castle_rook_to[C], qsc_castle_rook_from[C])
+                                       | square_to_bit(qsc_castle_rook_to[C]);
+            const bool     rook_path_clear = Bempty(rook_path & blockers);
+
+            if (king_path_clear && rook_path_clear && !(squares_attacked<O>() & king_path))
+                add_quiet_move(ml, K, qsc_castle_king_to[C], PieceType::King, Move::FLAG_CASTLE);
+        }
+
+        // pawn (pinned)
+        pieceBB = typePiecesBB[Pawn] & pinnedBB;
+
+        while (pieceBB) {
+            from = next_square(pieceBB);
+            d = dir[from];
+
+            if (/*do_quiet && */ d == abs(pawn_push) && (square_to_bit(to = from + pawn_push) & emptyBB))
             {
-               add_capture_move(ml, from, to, PieceType::Pawn, PieceType::Pawn, Move::FLAG_ENPASSANT);
+                add_quiet_move(ml, from, to, PieceType::Pawn, Move::FLAG_NONE);
+                if (Square::is_on_second_rank<C>(from) && (square_to_bit(to += pawn_push) & emptyBB))
+                    add_quiet_move(ml, from, to, PieceType::Pawn, Move::FLAG_DOUBLE);
             }
         }
 
-        from = ep + 1;          // 28 + 1 = 29 = f4
-        if (Square::file(to) < 7 && our_pawns & square_to_bit(from) )
-        {
-            pieceBB = occupiedBB ^ square_to_bit(from) ^ square_to_bit(ep) ^ square_to_bit(to);
+        // bishop or queen (pinned)
+        pieceBB = bq & pinnedBB;
 
-            if ( !(Attacks::bishop_moves(K, pieceBB) & bq & colorPiecesBB[O]) &&
-                !(Attacks::rook_moves(K, pieceBB)   & rq & colorPiecesBB[O]) )
+        while (pieceBB)
+        {
+            from = next_square(pieceBB);
+            d = dir[from];
+            if (d == 9)
             {
-                add_capture_move(ml, from, to, PieceType::Pawn, PieceType::Pawn, Move::FLAG_ENPASSANT);
+                attackBB = Attacks::bishop_moves(from, occupiedBB) & emptyBB & DiagonalMask64[from];
+                push_quiet_moves(ml, attackBB, from);
+            }
+            else if (d == 7)
+            {
+                attackBB = Attacks::bishop_moves(from, occupiedBB) & emptyBB & AntiDiagonalMask64[from];
+                push_quiet_moves(ml, attackBB, from);
+            }
+        }
+
+        // rook or queen (pinned)
+        pieceBB = rq & pinnedBB;
+
+        while (pieceBB)
+        {
+            from = next_square(pieceBB);
+            d = dir[from];
+            if (d == 1)
+            {
+                attackBB = Attacks::rook_moves(from, occupiedBB) & emptyBB & RankMask64[from];
+                push_quiet_moves(ml, attackBB, from);
+            }
+            else if (d == 8)
+            {
+                attackBB = Attacks::rook_moves(from, occupiedBB) & emptyBB & FileMask64[from];
+                push_quiet_moves(ml, attackBB, from);
             }
         }
     }
 
 
+    // common moves
+    //    std::cout << "legal_gen common " << std::endl;
+
+    // enpassant capture
+    /*
+     *      p P
+     *
+     *        P
+     *
+     * ep_square = e3 = 20
+     * from      = d4 = 27
+     * to
+     *
+     */
+
+
     // pawn
     pieceBB = typePiecesBB[Pawn] & unpinnedBB;
 
-    attackBB = (C ? (pieceBB & ~FileMask8[0]) >> 9 : (pieceBB & ~FileMask8[0]) << 7) & enemyBB;
-    push_capture_promotions(ml, attackBB & Promotion_Rank[C], pawn_left);
-    push_pawn_capture_moves(ml, attackBB & ~Promotion_Rank[C], pawn_left);
-
-    attackBB = (C ? (pieceBB & ~FileMask8[7]) >> 7 : (pieceBB & ~FileMask8[7]) << 9) & enemyBB;
-    push_capture_promotions(ml, attackBB & Promotion_Rank[C], pawn_right);
-    push_pawn_capture_moves(ml, attackBB & ~Promotion_Rank[C], pawn_right);
 
     attackBB = (C ? pieceBB >> 8 : pieceBB << 8) & emptyBB;
-    push_quiet_promotions(ml, attackBB & Promotion_Rank[C], pawn_push);
 
     push_pawn_quiet_moves(ml, attackBB & ~Promotion_Rank[C], pawn_push, Move::FLAG_NONE);
     attackBB = (C ? (((pieceBB & RankMask8[6]) >> 8) & ~occupiedBB) >> 8 : (((pieceBB & RankMask8[1]) << 8) & ~occupiedBB) << 8) & emptyBB;
@@ -154,8 +218,6 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
     while (pieceBB)
     {
         from = next_square(pieceBB);
-        attackBB = Attacks::knight_moves(from) & enemyBB;
-        push_piece_capture_moves(ml, attackBB, from, PieceType::Knight);
         attackBB = Attacks::knight_moves(from) & emptyBB;
         push_piece_quiet_moves(ml, attackBB, from, PieceType::Knight);
     }
@@ -165,8 +227,6 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
     while (pieceBB)
     {
         from = next_square(pieceBB);
-        attackBB = Attacks::bishop_moves(from, occupiedBB) & enemyBB;
-        push_capture_moves(ml, attackBB, from);
         attackBB = Attacks::bishop_moves(from, occupiedBB) & emptyBB;
         push_quiet_moves(ml, attackBB, from);
     }
@@ -176,8 +236,6 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
     while (pieceBB)
     {
         from = next_square(pieceBB);
-        attackBB = Attacks::rook_moves(from, occupiedBB) & enemyBB;
-        push_capture_moves(ml, attackBB, from);
         attackBB = Attacks::rook_moves(from, occupiedBB) & emptyBB;
         push_quiet_moves(ml, attackBB, from);
     }
@@ -192,14 +250,7 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
      */
     colorPiecesBB[C] ^= square_to_bit(K);
 
-    auto mask = Attacks::king_moves(K) & colorPiecesBB[O];
-    while (mask)
-    {
-        to = next_square(mask);
-        if (!square_attacked<O>(to))
-            add_capture_move(ml, K, to, PieceType::King, cpiece[to], Move::FLAG_NONE);
-    }
-    mask = Attacks::king_moves(K) & ~occupiedBB;
+    auto mask = Attacks::king_moves(K) & ~occupiedBB;
     while (mask)
     {
         to = next_square(mask);
@@ -212,5 +263,6 @@ constexpr void Board::legal_evasions(MoveList& ml) noexcept
 }
 
 // Explicit instantiations.
-template void Board::legal_evasions<WHITE>(MoveList& ml) noexcept;
-template void Board::legal_evasions<BLACK>(MoveList& ml) noexcept;
+template void Board::legal_quiet<WHITE>(MoveList& ml)  noexcept;
+template void Board::legal_quiet<BLACK>(MoveList& ml)  noexcept;
+

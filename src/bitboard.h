@@ -66,38 +66,6 @@ constexpr void unset_lsb(Bitboard& b) noexcept { b &= b-1; }
     return 63 - std::countl_zero(b);    // Returns the number of consecutive 0 bits in the value of x, starting from the most significant bit ("left").
 }
 
-//! \brief version provenant de M42.h
-//!
-[[nodiscard]] constexpr  int msbM42(uint64_t b) noexcept
-{
-  b |= 1;
-
-#if __cplusplus > 201703L
-  return std::bit_width(b) - 1;
-#elif defined(USE_INTRIN)
-#if defined(_MSC_VER)
-  unsigned long idx;
-  _BitScanReverse64(&idx, b);
-  return (int)idx;
-#elif defined(__GNUC__)
-  return 63 - __builtin_clzll(b);
-#endif  // _MSC_VER
-#endif  // __cplusplus
-
-  const int BitScanTable[64] = {
-    0, 47,  1, 56, 48, 27,  2, 60,
-    57, 49, 41, 37, 28, 16,  3, 61,
-    54, 58, 35, 52, 50, 42, 21, 44,
-    38, 32, 29, 23, 17, 11,  4, 62,
-    46, 55, 26, 59, 40, 36, 15, 53,
-    34, 51, 20, 43, 31, 22, 10, 45,
-    25, 39, 14, 33, 19, 30,  9, 24,
-    13, 18,  8, 12,  7,  6,  5, 63
-  };
-  b |= (b |= (b |= (b |= (b |= b >> 1) >> 2) >> 4) >> 8) >> 16;
-  return BitScanTable[((b | b >> 32) * 0x03f79d71b4cb0a89ULL) >> 58];
-}
-
 [[nodiscard]] constexpr int  Bcount(Bitboard b) noexcept { return std::popcount(b);}
 [[nodiscard]] constexpr bool Bempty(Bitboard b) noexcept { return b == 0ULL; }
 [[nodiscard]] constexpr bool Bsubset(Bitboard a, Bitboard b) noexcept { return( (a & b) == a); }
@@ -105,12 +73,13 @@ constexpr void unset_lsb(Bitboard& b) noexcept { b &= b-1; }
 /* Byte swap (= vertical mirror) */
 constexpr Bitboard byte_swap(Bitboard b)
 {
-#if defined(_MSC_VER)
-    return _byteswap_uint64(b);
-#elif defined(__GNUC__)
+#if defined(__GNUC__)
     return __builtin_bswap64(b);
+#elif defined(__llvm__)
+    return __builtin_bswap64(b);
+#elif defined(_MSC_VER)
+    return _byteswap_uint64(b);
 #else
-
     b = ((b >> 8)  & 0x00FF00FF00FF00FFULL) | ((b & 0x00FF00FF00FF00FFULL) << 8);
     b = ((b >> 16) & 0x0000FFFF0000FFFFULL) | ((b & 0x0000FFFF0000FFFFULL) << 16);
     return (b >> 32) | (b << 32);

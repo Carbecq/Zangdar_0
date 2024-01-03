@@ -5,47 +5,99 @@
 #include "TranspositionTable.h"
 #include "Move.h"
 
-extern PolyBook Book;
-
-//=================================================
-//! \brief  Constructeur défaut
-//-------------------------------------------------
-ThreadPool::ThreadPool() :
-    nbr_threads(1),
-    use_book(true),
-    log_uci(true)
-
-{
-#ifdef DEBUG_LOG
-    char message[100];
-    sprintf(message, "ThreadPool::constructeur 1 (nbr_threads=%d)", nbr_threads);
-    printlog(message);
-#endif
-
-}
 
 //=================================================
 //! \brief  Constructeur avec arguments
 //-------------------------------------------------
-ThreadPool::ThreadPool(int m_nbr, bool m_use, bool m_log) :
-    nbr_threads(m_nbr),
-    use_book(m_use),
-    log_uci(m_log)
+ThreadPool::ThreadPool(int _nbr, bool _tb, bool _log) :
+    nbrThreads(_nbr),
+    useSyzygy(_tb),
+    logUci(_log)
 {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[200];
     sprintf(message, "ThreadPool::constructeur : nbr_threads=%d ; use_book=%d ; log_uci=%d ", nbr_threads, use_book, log_uci);
     printlog(message);
 #endif
 
+    set_threads(_nbr);
+}
+
+//=================================================
+//! \brief  Initialisation du nombre de threads
+//-------------------------------------------------
+void ThreadPool::set_threads(int nbr)
+{
+    int processorCount = static_cast<int>(std::thread::hardware_concurrency());
+    // Check if the number of processors can be determined
+    if (processorCount == 0)
+        processorCount = MAX_THREADS;
+
+    // Clamp the number of threads to the number of processors
+    nbrThreads     = std::min(nbr, processorCount);
+    nbrThreads     = std::max(nbrThreads, 1);
+    nbrThreads     = std::min(nbrThreads, MAX_THREADS);
+
+    create();
+}
+
+//=================================================
+//! \brief  Initialisation des valeurs des threads
+//! lors de la création
+//-------------------------------------------------
+void ThreadPool::create()
+{
+    for (int i = 0; i < nbrThreads; i++)
+    {
+        threadData[i].index      = i;
+        threadData[i].depth      = 0;
+        threadData[i].score      = -INFINITE;
+        threadData[i].seldepth   = 0;
+        threadData[i].nodes      = 0;
+        threadData[i].stopped    = false;
+    }
+}
+
+//=================================================
+//! \brief  Initialisation des valeurs des threads
+//! Utilisé lors de "start_thinking"
+//-------------------------------------------------
+void ThreadPool::init()
+{
+    for (int i = 0; i < nbrThreads; i++)
+    {
+        threadData[i].nodes      = 0;
+        threadData[i].seldepth   = 0;
+
+        memset(threadData[i].info.eval,     0,               sizeof(threadData[i].info.eval));
+    }
+}
+
+//=================================================
+//! \brief  Initialisation des valeurs des threads
+//! Utilisé lors de "newgame"
+//-------------------------------------------------
+void ThreadPool::reset()
+{
+    for (int i = 0; i < nbrThreads; i++)
+    {
+        threadData[i].nodes      = 0;
+        threadData[i].seldepth   = 0;
+
+        memset(threadData[i].info.eval,     0, sizeof(threadData[i].info.eval));
+        memset(threadData[i].info.killer1, Move::MOVE_NONE, sizeof(threadData[i].info.killer1));
+        memset(threadData[i].info.killer2, Move::MOVE_NONE, sizeof(threadData[i].info.killer2));
+        memset(threadData[i].info.history,  0, sizeof(threadData[i].info.history));
+    }
 }
 
 //=================================================
 //! \brief  Lance la recherche
+//! Fonction lancée par Uci::parse_go
 //-------------------------------------------------
 void ThreadPool::start_thinking(const Board& board, const Timer& timer)
 {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
     char message[100];
     sprintf(message, "ThreadPool::start_thinking");
     printlog(message);
@@ -54,63 +106,51 @@ void ThreadPool::start_thinking(const Board& board, const Timer& timer)
     MOVE best = 0;
 
     // Probe Opening Book
-    if(use_book == true && (best = Book.get_move(board)) != 0)
+    if(ownBook.get_useBook() == true && (best = ownBook.get_move(board)) != 0)
     {
         std::cout << "bestmove " << Move::name(best) << std::endl;
     }
 
     // Probe Syzygy TableBases
-    else if (UseSyzygy && board.probe_root(best) == true)
+    else if (useSyzygy && board.probe_root(best) == true)
     {
         std::cout << "bestmove " << Move::name(best) << std::endl;
     }
     else
     {
-#ifdef DEBUG_LOG
+#if defined DEBUG_LOG
         sprintf(message, "ThreadPool::start_thinking ; lancement de %d threads", nbr_threads);
         printlog(message);
 #endif
 
-        int side = board.side_to_move;
+        create();
+        init();
 
-        for (int i = 0; i < MAX_THREADS; i++)
-        {
-            if (threads[i].search)
-            {
-                delete threads[i].search;
-                threads[i].search = nullptr;
-            }
-        }
-
-        for (int i = 0; i < nbr_threads; i++)
-        {
-            threads[i].index      = i;
-            threads[i].best_move  = 0;
-            threads[i].best_score = -INFINITE;
-            threads[i].best_depth = 0;
-            threads[i].seldepth   = 0;
-            threads[i].nodes      = 0;
-            threads[i].depth      = 0;
-            threads[i].score      = 0;
-
-            // copie des arguments
-            Board b = board;
-            Timer t = timer;
-            OrderingInfo o = OrderingInfo();
-            threads[i].search = new Search(b, t, o, log_uci);
-        }
+        for (int i=0; i<nbrThreads; i++)
+            threadData[i].stopped = false;
 
         // Préparation des tables de transposition
-        Transtable.update_age();
+        transpositionTable.update_age();
+
+        // On utilise la même instance de Search pour toutes les threads,
+        // à condition que les threads n'utilisent pas les mêmes valeurs.
+        Search uci_search;
 
         // Il faut mettre le lancement des threads dans une boucle séparée
         // car il faut être sur que la Search soit bien créée
-        for (int i = 0; i < nbr_threads; i++)
+
+        int side = board.side_to_move;
+
+        for (int i = 0; i < nbrThreads; i++)
         {
+            // copie des arguments
+            Board b = board;
+            Timer t = timer;
+
             if (side == WHITE)
-                threads[i].thread = std::thread(&Search::think<WHITE>, threads[i].search, i);
+                threadData[i].thread = std::thread(&Search::think<WHITE>, &uci_search, b, t, i);
             else
-                threads[i].thread = std::thread(&Search::think<BLACK>, threads[i].search, i);
+                threadData[i].thread = std::thread(&Search::think<BLACK>, &uci_search, b, t, i);
         }
     }
 }
@@ -125,12 +165,9 @@ void ThreadPool::main_thread_stopped()
     // envoie à toutes les autres threads
     // le signal d'arrêter
 
-    for (int i = 1; i < nbr_threads; i++)
-        if (threads[i].search != nullptr)
-            threads[i].search->stop();
+    for (int i = 1; i < nbrThreads; i++)
+        threadData[i].stopped = true;
 
-    // NE PAS détruire les search, on en a besoin
-    // pour calculer le nombre de nodes
 }
 
 //=================================================
@@ -139,10 +176,10 @@ void ThreadPool::main_thread_stopped()
 //-------------------------------------------------
 void ThreadPool::wait(int start)
 {
-    for (int i = start; i < nbr_threads; i++)
+    for (int i = start; i < nbrThreads; i++)
     {
-        if (threads[i].thread.joinable())
-            threads[i].thread.join();
+        if (threadData[i].thread.joinable())
+            threadData[i].thread.join();
     }
 }
 
@@ -152,10 +189,10 @@ void ThreadPool::wait(int start)
 //-------------------------------------------------
 void ThreadPool::stop()
 {
-    if (threads[0].search != nullptr)
-        threads[0].search->stop();
-    if (threads[0].thread.joinable())
-        threads[0].thread.join();
+    threadData[0].stopped = true;
+
+    if (threadData[0].thread.joinable())
+        threadData[0].thread.join();
 }
 
 //=================================================
@@ -165,11 +202,6 @@ void ThreadPool::quit()
 {
     stop();
 
-    for (int i = 0; i < nbr_threads; i++)
-    {
-        delete threads[i].search;
-        threads[i].search = nullptr;
-    }
 }
 
 //=================================================
@@ -178,9 +210,9 @@ void ThreadPool::quit()
 U64 ThreadPool::get_all_nodes() const
 {
     U64 total = 0;
-    for (int i=0; i<nbr_threads; i++)
+    for (int i=0; i<nbrThreads; i++)
     {
-        total += threads[i].nodes;
+        total += threadData[i].nodes;
     }
     return(total);
 }
@@ -191,10 +223,24 @@ U64 ThreadPool::get_all_nodes() const
 int ThreadPool::get_all_depths() const
 {
     int total = 0;
-    for (int i=0; i<nbr_threads; i++)
+    for (int i=0; i<nbrThreads; i++)
     {
-        total += threads[i].best_depth;
+        total += threadData[i].best_depth;
     }
     return(total);
 }
+
+//=================================================
+//! \brief  Retourne le nombre total de tbhits
+//-------------------------------------------------
+U64 ThreadPool::get_all_tbhits() const
+{
+    U64 total = 0;
+    for (int i=0; i<nbrThreads; i++)
+    {
+        total += threadData[i].tbhits;
+    }
+    return(total);
+}
+
 

@@ -3,7 +3,6 @@
 
 class ThreadPool;
 
-#include <thread>
 #include "defines.h"
 #include "Board.h"
 #include "Timer.h"
@@ -12,9 +11,13 @@ class ThreadPool;
 class ThreadPool
 {
 public:
-    ThreadPool();
-    ThreadPool(int m_nbr, bool m_use, bool m_log);
-    void start_thinking(const Board& board, const Timer& timer);
+    explicit ThreadPool(int _nbr, bool _tb, bool _log);
+    void set_threads(int nbr);
+    void create();
+    void init();
+    void reset();
+
+    void start_thinking(const Board &board, const Timer &timer);
     void main_thread_stopped();
     void stop();
     void wait(int start);
@@ -22,21 +25,22 @@ public:
 
     U64  get_all_nodes() const;
     int  get_all_depths() const;
-    MOVE get_best_move() const { return threads[0].best_move; }
+    MOVE get_best_move() const { return threadData[0].best_move; }
+    U64  get_all_tbhits() const;
 
-    void set_nbrThreads(int n)  { nbr_threads = n;  }
-    void set_useBook(bool f)    { use_book = f;     }
-    void set_logUci(bool f)     { log_uci = f;      }
+    void set_logUci(bool f)     { logUci = f;       }
+    void set_useSyzygy(bool f)  { useSyzygy = f;    }
 
-    int  get_nbrThreads()   const { return(nbr_threads);  }
-    bool get_useBook()      const { return(use_book);     }
+    bool get_logUci() const { return logUci; }
+    int  get_nbrThreads() const { return nbrThreads; }
+    bool get_useSyzygy() const { return useSyzygy; }
 
-    std::array<ThreadData, MAX_THREADS> threads;
+    std::array<ThreadData, MAX_THREADS> threadData;
 
 private:
-    int     nbr_threads;
-    bool    use_book;
-    bool    log_uci;
+    int     nbrThreads;
+    bool    useSyzygy;
+    bool    logUci;
 
 };
 
