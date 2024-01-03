@@ -42,7 +42,7 @@
 
 #include "../defines.h"
 #include "../bitboard.h"
-#include "../MoveGen.h"
+#include "../Attacks.h"
 
 // Population count/Hamming weight
 #define PYRRHIC_POPCOUNT(x)             (Bcount(x))
@@ -53,12 +53,12 @@
 // Returns the index of the least significant bit and unsets it
 #define PYRRHIC_POPLSB(x)               (PYRRHIC_next_square(x))
 
-#define PYRRHIC_PAWN_ATTACKS(sq, c)     (MoveGen::pawn_attacks(!c, sq))
-#define PYRRHIC_KNIGHT_ATTACKS(sq)      (MoveGen::knight_moves(sq))
-#define PYRRHIC_BISHOP_ATTACKS(sq, occ) (MoveGen::bishop_moves(sq, occ))
-#define PYRRHIC_ROOK_ATTACKS(sq, occ)   (MoveGen::rook_moves(sq, occ))
-#define PYRRHIC_QUEEN_ATTACKS(sq, occ)  (MoveGen::queen_moves(sq, occ))
-#define PYRRHIC_KING_ATTACKS(sq)        (MoveGen::king_moves(sq))
+#define PYRRHIC_PAWN_ATTACKS(sq, c)     (Attacks::pawn_attacks(!c, sq))
+#define PYRRHIC_KNIGHT_ATTACKS(sq)      (Attacks::knight_moves(sq))
+#define PYRRHIC_BISHOP_ATTACKS(sq, occ) (Attacks::bishop_moves(sq, occ))
+#define PYRRHIC_ROOK_ATTACKS(sq, occ)   (Attacks::rook_moves(sq, occ))
+#define PYRRHIC_QUEEN_ATTACKS(sq, occ)  (Attacks::queen_moves(sq, occ))
+#define PYRRHIC_KING_ATTACKS(sq)        (Attacks::king_moves(sq))
 
 
 
