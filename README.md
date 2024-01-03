@@ -13,7 +13,7 @@ Why Zangdar ? Well look for the Naheulbeuk dungeon !!
 I would like to thank specially the authors of Vice, TSCP, Gerbil. They helped me a lot understand several aspects of programmation.
 I also use the M42 library for generating attacks; and took inspiration from the Libchess library. 
 
-At present, Zangdar can play honestly. I done several matches, and I think Zangdar has an elo of about 2700.
+At present, Zangdar can play honestly. I done several matches, and I think Zangdar comes near 3000. I would never hoped to come this far.
 It has the following features :
 
 + **Language** 
@@ -58,9 +58,10 @@ It has the following features :
    
 + **Usage**
 - The program is only an engine, so it need one interface (Arena, Banksgui...).
-- I provide two binaries, one for Windows and one for Linux. Both are compiled in static, so you don't need extrernal libraries. The Linux one is done with Linux Ubuntu, I can't say if it will work with another distro.
+- I provide only binaries for Windows. I stopped developping with Linux, as this crush my windows boot. All are compiled in static, so you don't need extrernal libraries. 
 By default, the opening book is disabled. It can be re-enabled by using an uci option. Zangdar will search the book in the binary's directory. This location can too be specified with an uci option. The book is of polyglot format, and must be named 'book.bin'.
 
 + **Compilation**
-I provide a Makefile that you can use to compile Zangdar. You must have a C++ compiler that use at least C++17. I use personnaly g++. 
-Since my computer is rather old, I can only use ancient possibilities like popcount. If you have a newer computer, you can certainly use  bmi2, avx2... Look in the makefile and add what you think is needed. I can't unfortunately test them.
+I provide a Makefile that you can use to compile Zangdar. You must have a C++ compiler that use at least C++17. I use personnaly g++.
+I provide also binaries for several architectures.
+
