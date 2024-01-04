@@ -1,5 +1,5 @@
 # Zangdar
-A UCI chess engine written in C++17
+A UCI chess engine written in C++20.
 
 This project is somewhat a hobby, it will serve to learn the ropes of chess programming.
 I also play chess, very humbly; and I was always curious of how the programs work.
@@ -17,7 +17,7 @@ At present, Zangdar can play honestly. I done several matches, and I think Zangd
 It has the following features :
 
 + **Language** 
-  - Written in C++17
+  - Written in C++20
 
 + **Board** 
   - Magic Bitboard
@@ -62,6 +62,6 @@ It has the following features :
 By default, the opening book is disabled. It can be re-enabled by using an uci option. Zangdar will search the book in the binary's directory. This location can too be specified with an uci option. The book is of polyglot format, and must be named 'book.bin'.
 
 + **Compilation**
-I provide a Makefile that you can use to compile Zangdar. You must have a C++ compiler that use at least C++17. I use personnaly g++.
+You must have a C++ compiler that use at least C++20. I use QtCreator on Windows 11, that compiles with mingw.
 I provide also binaries for several architectures.
 
