@@ -1,4 +1,5 @@
 #include <cmath>
+#include <cstring>
 #include <iomanip>
 #include "Search.h"
 #include "ThreadPool.h"
@@ -169,5 +170,18 @@ bool Search::check_limits(const ThreadData* td) const
             && td->index == 0
             && timer.finishOnThisMove());
 
+    //    if (  (td->nodes & 4095) != 4095
+    //        || td->index != 0)
+    //        || td->depth == 1 )
+    //        return false;
+    //    else
+    //        return timer.finishOnThisMove();
+
+
+    //    if ((td->nodes & 4095) == 4095
+    //        && td->index == 0)
+    //        return timer.checkLimits();
+    //    else
+    //        return false;
 }
 

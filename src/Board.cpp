@@ -6,12 +6,10 @@
 //---------------------------------------------------
 Board::Board() noexcept
 {
-    init_bitmasks();
 }
 
 Board::Board(const std::string &fen) noexcept
 {
-    init_bitmasks();
     set_fen(fen, false);
 }
 
@@ -31,31 +29,31 @@ std::string Board::display() const noexcept
 
     while (i >= 0) {
         const auto sq = i;
-        const auto bb = square_to_bit(sq);
-
-        if (pieces_cp<Color::WHITE, PieceType::Pawn>() & bb) {
+        const auto bb = BB::sq2BB(sq);
+        
+        if (occupancy_cp<Color::WHITE, PAWN>() & bb) {
             ss << 'P';
-        } else if (pieces_cp<Color::WHITE, PieceType::Knight>() & bb) {
+        } else if (occupancy_cp<Color::WHITE, KNIGHT>() & bb) {
             ss << 'N';
-        } else if (pieces_cp<Color::WHITE, PieceType::Bishop>() & bb) {
+        } else if (occupancy_cp<Color::WHITE, BISHOP>() & bb) {
             ss << 'B';
-        } else if (pieces_cp<Color::WHITE, PieceType::Rook>() & bb) {
+        } else if (occupancy_cp<Color::WHITE, ROOK>() & bb) {
             ss << 'R';
-        } else if (pieces_cp<Color::WHITE, PieceType::Queen>() & bb) {
+        } else if (occupancy_cp<Color::WHITE, QUEEN>() & bb) {
             ss << 'Q';
-        } else if (pieces_cp<Color::WHITE, PieceType::King>() & bb) {
+        } else if (occupancy_cp<Color::WHITE, KING>() & bb) {
             ss << 'K';
-        } else if (pieces_cp<Color::BLACK, PieceType::Pawn>() & bb) {
+        } else if (occupancy_cp<Color::BLACK, PAWN>() & bb) {
             ss << 'p';
-        } else if (pieces_cp<Color::BLACK, PieceType::Knight>() & bb) {
+        } else if (occupancy_cp<Color::BLACK, KNIGHT>() & bb) {
             ss << 'n';
-        } else if (pieces_cp<Color::BLACK, PieceType::Bishop>() & bb) {
+        } else if (occupancy_cp<Color::BLACK, BISHOP>() & bb) {
             ss << 'b';
-        } else if (pieces_cp<Color::BLACK, PieceType::Rook>() & bb) {
+        } else if (occupancy_cp<Color::BLACK, ROOK>() & bb) {
             ss << 'r';
-        } else if (pieces_cp<Color::BLACK, PieceType::Queen>() & bb) {
+        } else if (occupancy_cp<Color::BLACK, QUEEN>() & bb) {
             ss << 'q';
-        } else if (pieces_cp<Color::BLACK, PieceType::King>() & bb) {
+        } else if (occupancy_cp<Color::BLACK, KING>() & bb) {
             ss << 'k';
         } else {
             ss << '.';
@@ -103,8 +101,8 @@ void Board::clear() noexcept
     typePiecesBB[4] = 0ULL;
     typePiecesBB[5] = 0ULL;
     typePiecesBB[6] = 0ULL;
-
-    cpiece.fill(PieceType::NO_TYPE);
+    
+    pieceOn.fill(NO_TYPE);
 
     x_king[WHITE] = NO_SQUARE;                      // position des rois
     x_king[BLACK] = NO_SQUARE;                      // position des rois
@@ -122,5 +120,20 @@ void Board::clear() noexcept
     game_history.fill(UndoInfo{0, 0, 0, 0, 0, 0});
 }
 
-template bool Board::is_in_check<WHITE>()     const noexcept;
-template bool Board::is_in_check<BLACK>()     const noexcept;
+//==========================================================
+//! \brief  Calcule la phase de la position
+//! Cette phase dépend des pièces sur l'échiquier
+//! La phase va de 0 à 24, dans le cas où aucun pion n'a été promu.
+//!     phase =  0 : endgame
+//!     phase = 24 : opening
+//! Remarque : le code Fruit va à l'envers.
+//----------------------------------------------------------
+int Board::get_phase24()
+{
+    return(  4 * BB::count_bit(typePiecesBB[QUEEN])
+           + 2 * BB::count_bit(typePiecesBB[ROOK])
+           +     BB::count_bit(typePiecesBB[BISHOP] | typePiecesBB[KNIGHT]) );
+}
+
+
+

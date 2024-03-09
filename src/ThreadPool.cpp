@@ -4,6 +4,7 @@
 #include "PolyBook.h"
 #include "TranspositionTable.h"
 #include "Move.h"
+#include <cstring>
 
 
 //=================================================
@@ -16,7 +17,7 @@ ThreadPool::ThreadPool(int _nbr, bool _tb, bool _log) :
 {
 #if defined DEBUG_LOG
     char message[200];
-    sprintf(message, "ThreadPool::constructeur : nbr_threads=%d ; use_book=%d ; log_uci=%d ", nbr_threads, use_book, log_uci);
+    sprintf(message, "ThreadPool::constructeur : nbrThreads=%d ; useSyzygy=%d ; logUci=%d ", _nbr, _tb, _log);
     printlog(message);
 #endif
 
@@ -55,6 +56,12 @@ void ThreadPool::create()
         threadData[i].seldepth   = 0;
         threadData[i].nodes      = 0;
         threadData[i].stopped    = false;
+
+        threadData[i].move = &(threadData[i].move_stack[STACK_OFFSET]);
+        threadData[i].eval = &(threadData[i].eval_stack[STACK_OFFSET]);
+
+        // threadData[i].results.depth     = 0;
+        // threadData[i].results.prevScore = -INFINITE;
     }
 }
 
@@ -66,10 +73,27 @@ void ThreadPool::init()
 {
     for (int i = 0; i < nbrThreads; i++)
     {
+        // threadData[i].results.prevScore =
+        //     threadData[i].results.depth > 0 ?
+        //         threadData[i].results.scores[threadData[i].results.depth] :
+        //         UNKNOWN;
+        // threadData[i].results.depth     = 0;
+
         threadData[i].nodes      = 0;
         threadData[i].seldepth   = 0;
 
-        memset(threadData[i].info.eval,     0,               sizeof(threadData[i].info.eval));
+        // empty unneeded data
+        std::memset(threadData[i].move_stack,     0, sizeof(threadData[i].move_stack));
+        std::memset(threadData[i].eval_stack,     0, sizeof(threadData[i].eval_stack));
+        std::memset(threadData[i].order.excluded, 0, sizeof(threadData[i].order.excluded));
+
+
+        // memset(threadData[i].results.scores, 0,               sizeof(threadData[i].results.scores));
+        // memset(threadData[i].results.moves,  Move::MOVE_NONE, sizeof(threadData[i].results.moves));
+
+        // Il faut avoir une copie du Board
+        // de façon à éviter les problèmes en multi-threads
+//        threadData[i].board = *board;
     }
 }
 
@@ -81,13 +105,12 @@ void ThreadPool::reset()
 {
     for (int i = 0; i < nbrThreads; i++)
     {
+        //        threadData[i].results.depth = 0;
+
         threadData[i].nodes      = 0;
         threadData[i].seldepth   = 0;
 
-        memset(threadData[i].info.eval,     0, sizeof(threadData[i].info.eval));
-        memset(threadData[i].info.killer1, Move::MOVE_NONE, sizeof(threadData[i].info.killer1));
-        memset(threadData[i].info.killer2, Move::MOVE_NONE, sizeof(threadData[i].info.killer2));
-        memset(threadData[i].info.history,  0, sizeof(threadData[i].info.history));
+        threadData[i].order.clear_all();
     }
 }
 
@@ -119,7 +142,7 @@ void ThreadPool::start_thinking(const Board& board, const Timer& timer)
     else
     {
 #if defined DEBUG_LOG
-        sprintf(message, "ThreadPool::start_thinking ; lancement de %d threads", nbr_threads);
+        sprintf(message, "ThreadPool::start_thinking ; lancement de %d threads", nbrThreads);
         printlog(message);
 #endif
 
@@ -168,6 +191,8 @@ void ThreadPool::main_thread_stopped()
     for (int i = 1; i < nbrThreads; i++)
         threadData[i].stopped = true;
 
+    // NE PAS détruire les search, on en a besoin
+    // pour calculer le nombre de nodes
 }
 
 //=================================================

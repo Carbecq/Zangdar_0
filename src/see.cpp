@@ -44,14 +44,14 @@ bool Board::fast_see(const MOVE move, const int threshold) const
 
     // Bitboard de toutes les cases occupées, en enlevant la pièce de départ
     // et en ajoutant la case d'arrivée
-    Bitboard occupiedBB  = (occupied() ^ square_to_bit(from)) | square_to_bit(dest);
+    Bitboard occupiedBB  = (occupancy_all() ^ BB::sq2BB(from)) | BB::sq2BB(dest);
 
     // Bitboard de toutes les attaques (Blanches et Noires) de la case d'arrivée
     Bitboard all_attackersBB = all_attackers(dest, occupiedBB);
 
     // Bitboards des sliders
-    const Bitboard bqBB = typePiecesBB[Bishop] | typePiecesBB[Queen];
-    const Bitboard rqBB = typePiecesBB[Rook]   | typePiecesBB[Queen];
+    const Bitboard bqBB = typePiecesBB[BISHOP] | typePiecesBB[QUEEN];
+    const Bitboard rqBB = typePiecesBB[ROOK]   | typePiecesBB[QUEEN];
 
     // C'est au tour de l'adversaire de jouer
     Color color = ~turn();
@@ -70,8 +70,8 @@ bool Board::fast_see(const MOVE move, const int threshold) const
             break;
 
         // Recherche de la pièce de moindre valeur qui attaque
-        int piece = Pawn;
-        for (piece = Pawn; piece < King; piece++)
+        int piece = PAWN;
+        for (piece = PAWN; piece < KING; piece++)
             if (my_attackers & typePiecesBB[piece])
                 break;
 
@@ -92,23 +92,23 @@ bool Board::fast_see(const MOVE move, const int threshold) const
             // As a slide speed up for move legality checking, if our last attacking
             // piece is a king, and our opponent still has attackers, then we've
             // lost as the move we followed would be illegal
-            if (piece == King && (all_attackersBB & colorPiecesBB[color]))
+            if (piece == KING && (all_attackersBB & colorPiecesBB[color]))
                 color = ~color;
 
             break;
         }
 
         // Supprime l'attaquant "piece" des occupants
-        occupiedBB ^= square_to_bit(first_square(my_attackers & typePiecesBB[piece]));
+        occupiedBB ^= BB::sq2BB(BB::get_lsb(my_attackers & typePiecesBB[piece]));
 
         // Si l'attaque était diagonale, il peut y avoir
         // des attaquants fou ou dame cachés derrière
-        if (piece == Pawn || piece == Bishop || piece == Queen)
+        if (piece == PAWN || piece == BISHOP || piece == QUEEN)
             all_attackersBB |= Attacks::bishop_moves(dest, occupiedBB) & bqBB;
 
         // Si l'attaque était orthogonale, il peut y avoir
         // des attaquants tour ou dame cachés derrière
-        if (piece == Rook || piece == Queen)
+        if (piece == ROOK || piece == QUEEN)
             all_attackersBB |= Attacks::rook_moves(dest, occupiedBB) & rqBB;
     }
 

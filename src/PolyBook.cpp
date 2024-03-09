@@ -60,7 +60,7 @@ U64 PolyBook::calculate_hash(const Board& board)
     int sq;
     Bitboard pieces;
 
-    for (PieceType type : {Pawn, Knight, Bishop, Rook, Queen, King})
+    for (PieceType type : {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING})
     {
         for (Color color : {BLACK, WHITE})
         {
@@ -68,7 +68,7 @@ U64 PolyBook::calculate_hash(const Board& board)
 
             while (pieces)
             {
-                sq = next_square(pieces);
+                sq = BB::pop_lsb(pieces);
                 hash ^= Random64Poly[64 * pieceNum + sq];
             }
             pieceNum++;
@@ -93,9 +93,9 @@ U64 PolyBook::calculate_hash(const Board& board)
         // Bitboard des attaques de pion ADVERSE
         Bitboard bb = Attacks::pawn_attacks(!us, epsq);
 
-        if (bb & board.colorPiecesBB[board.side_to_move] & board.typePiecesBB[Pawn])
+        if (bb & board.colorPiecesBB[board.side_to_move] & board.typePiecesBB[PAWN])
         {
-            int file = Square::file(epsq);
+            int file = SQ::file(epsq);
             hash ^= Random64Poly[772 + file];
         }
     }
@@ -177,7 +177,7 @@ void PolyBook::init(const std::string &name)
         use_book = true;
 
 #if defined DEBUG_LOG
-    sprintf(message, "PolyBook::init : use_book = %d ", threadPool.get_useBook());
+    sprintf(message, "PolyBook::init : use_book = %d ", ownBook.get_useBook());
     printlog(message);
 #endif
 }
@@ -256,10 +256,10 @@ MOVE PolyBook::poly_to_move(U16 polyMove, const Board& board)
     int tr = (polyMove >> 3) & 7;   // dest rank
     int pp = (polyMove >> 12) & 7;  // promotion piece
 
-    int from = Square::square(ff, fr);
-    int dest = Square::square(tf, tr);
-    PieceType piece = board.cpiece[from];
-    PieceType capt  = board.cpiece[dest];
+    int from = SQ::square(ff, fr);
+    int dest = SQ::square(tf, tr);
+    PieceType piece = board.pieceOn[from];
+    PieceType capt  = board.pieceOn[dest];
     PieceType promo = static_cast<PieceType>(pp);
     int       flags = Move::FLAG_NONE;
 

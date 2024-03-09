@@ -13,7 +13,7 @@ template <Color C> constexpr void Board::undo_move() noexcept
     gamemove_counter--;
     
     const auto &move    = game_history[gamemove_counter].move;
-    const auto them     = !C;
+    constexpr Color Them     = ~C;
     const auto dest     = Move::dest(move);
     const auto from     = Move::from(move);
     const auto piece    = Move::piece(move);
@@ -31,7 +31,7 @@ template <Color C> constexpr void Board::undo_move() noexcept
     fullmove_counter -= (C == Color::BLACK);
 
     // Déplacement du roi
-    if (piece == PieceType::King)
+    if (piece == KING)
         x_king[C] = from;
 
     // Castling
@@ -43,12 +43,12 @@ template <Color C> constexpr void Board::undo_move() noexcept
 #endif
 
     // Remove piece
-    flip(colorPiecesBB[C],    dest);
-    flip(typePiecesBB[piece],  dest);
+    BB::toggle_bit(colorPiecesBB[C],    dest);
+    BB::toggle_bit(typePiecesBB[piece],  dest);
 
     // Add piece
-    flip(colorPiecesBB[C], from);
-    flip(typePiecesBB[piece], from);
+    BB::toggle_bit(colorPiecesBB[C], from);
+    BB::toggle_bit(typePiecesBB[piece], from);
 
     //====================================================================================
     //  Coup normal (pas spécial)
@@ -61,8 +61,8 @@ template <Color C> constexpr void Board::undo_move() noexcept
         //------------------------------------------------------------------------------------
         if (Move::is_depl(move))
         {
-            cpiece[from] = piece;
-            cpiece[dest] = PieceType::NO_TYPE;
+            pieceOn[from] = piece;
+            pieceOn[dest] = NO_TYPE;
         }
 
         //====================================================================================
@@ -76,15 +76,15 @@ template <Color C> constexpr void Board::undo_move() noexcept
             if (Move::is_promoting(move))
             {
                 // Replace pawn with piece
-                flip(typePiecesBB[PieceType::Pawn], dest);
-                flip(typePiecesBB[promo], dest);
+                BB::toggle_bit(typePiecesBB[PAWN], dest);
+                BB::toggle_bit(typePiecesBB[promo], dest);
 
                 // Replace the captured piece
-                flip(typePiecesBB[captured], dest);
-                flip(colorPiecesBB[them], dest);
-
-                cpiece[from]= PieceType::Pawn;
-                cpiece[dest]  = captured;
+                BB::toggle_bit(typePiecesBB[captured], dest);
+                BB::toggle_bit(colorPiecesBB[Them], dest);
+                
+                pieceOn[from]= PAWN;
+                pieceOn[dest]  = captured;
             }
 
             //====================================================================================
@@ -92,10 +92,10 @@ template <Color C> constexpr void Board::undo_move() noexcept
             //------------------------------------------------------------------------------------
             else
             {
-                cpiece[from]= piece;
-                flip(colorPiecesBB[them], dest);
-                flip(typePiecesBB[captured], dest);
-                cpiece[dest]  = captured;
+                pieceOn[from]= piece;
+                BB::toggle_bit(colorPiecesBB[Them], dest);
+                BB::toggle_bit(typePiecesBB[captured], dest);
+                pieceOn[dest]  = captured;
             }
         }
 
@@ -105,11 +105,11 @@ template <Color C> constexpr void Board::undo_move() noexcept
         else if (Move::is_promoting(move))
         {
             // Replace piece with pawn
-            flip(typePiecesBB[PieceType::Pawn], dest);
-            flip(typePiecesBB[promo], dest);
-
-            cpiece[from]= PieceType::Pawn;
-            cpiece[dest]  = PieceType::NO_TYPE;
+            BB::toggle_bit(typePiecesBB[PAWN], dest);
+            BB::toggle_bit(typePiecesBB[promo], dest);
+            
+            pieceOn[from]= PAWN;
+            pieceOn[dest]  = NO_TYPE;
         }
     }
 
@@ -123,8 +123,8 @@ template <Color C> constexpr void Board::undo_move() noexcept
         //------------------------------------------------------------------------------------
         if (Move::is_double(move))
         {
-            cpiece[from]= piece;
-            cpiece[dest]  = PieceType::NO_TYPE;
+            pieceOn[from]= piece;
+            pieceOn[dest]  = NO_TYPE;
         }
 
         //====================================================================================
@@ -135,21 +135,21 @@ template <Color C> constexpr void Board::undo_move() noexcept
             // Replace the captured pawn
             if (C == Color::WHITE)
             {
-                flip(typePiecesBB[PieceType::Pawn], Square::south(dest));
-                flip(colorPiecesBB[Color::BLACK], Square::south(dest));
-
-                cpiece[from]= PieceType::Pawn;
-                cpiece[dest]  = PieceType::NO_TYPE;
-                cpiece[Square::south(dest)] = PieceType::Pawn;
+                BB::toggle_bit(typePiecesBB[PAWN], SQ::south(dest));
+                BB::toggle_bit(colorPiecesBB[Color::BLACK], SQ::south(dest));
+                
+                pieceOn[from]= PAWN;
+                pieceOn[dest]  = NO_TYPE;
+                pieceOn[SQ::south(dest)] = PAWN;
             }
             else
             {
-                flip(typePiecesBB[PieceType::Pawn], Square::north(dest));
-                flip(colorPiecesBB[Color::WHITE], Square::north(dest));
-
-                cpiece[from]= PieceType::Pawn;
-                cpiece[dest]  = PieceType::NO_TYPE;
-                cpiece[Square::north(dest)] = PieceType::Pawn;
+                BB::toggle_bit(typePiecesBB[PAWN], SQ::north(dest));
+                BB::toggle_bit(colorPiecesBB[Color::WHITE], SQ::north(dest));
+                
+                pieceOn[from]= PAWN;
+                pieceOn[dest]  = NO_TYPE;
+                pieceOn[SQ::north(dest)] = PAWN;
             }
         }
 
@@ -162,37 +162,38 @@ template <Color C> constexpr void Board::undo_move() noexcept
             //====================================================================================
             //  Petit Roque
             //------------------------------------------------------------------------------------
-            if ((square_to_bit(dest)) & FILE_G_BB)
+            if ((BB::sq2BB(dest)) & FILE_G_BB)
             {
                 // Move the rook
-                flip2(colorPiecesBB[C],  ksc_castle_rook_from[C], ksc_castle_rook_to[C]);
-                flip2(typePiecesBB[PieceType::Rook], ksc_castle_rook_from[C], ksc_castle_rook_to[C]);
-
-                cpiece[from]= piece;
-                cpiece[dest]  = PieceType::NO_TYPE;
-                cpiece[ksc_castle_rook_from[C]] = PieceType::Rook;
-                cpiece[ksc_castle_rook_to[C]]   = PieceType::NO_TYPE;
+                BB::toggle_bit2(colorPiecesBB[C],  ksc_castle_rook_from[C], ksc_castle_rook_to[C]);
+                BB::toggle_bit2(typePiecesBB[ROOK], ksc_castle_rook_from[C], ksc_castle_rook_to[C]);
+                
+                pieceOn[from]= piece;
+                pieceOn[dest]  = NO_TYPE;
+                pieceOn[ksc_castle_rook_from[C]] = ROOK;
+                pieceOn[ksc_castle_rook_to[C]]   = NO_TYPE;
             }
 
             //====================================================================================
             //  Grand Roque
             //------------------------------------------------------------------------------------
-            else if ((square_to_bit(dest)) & FILE_C_BB)
+            else if ((BB::sq2BB(dest)) & FILE_C_BB)
             {
                 // Move the rook
-                flip2(colorPiecesBB[C], qsc_castle_rook_from[C], qsc_castle_rook_to[C]);
-                flip2(typePiecesBB[PieceType::Rook], qsc_castle_rook_from[C], qsc_castle_rook_to[C]);
-
-                cpiece[from]= piece;
-                cpiece[dest]  = PieceType::NO_TYPE;
-                cpiece[qsc_castle_rook_from[C]] = PieceType::Rook;
-                cpiece[qsc_castle_rook_to[C]]   = PieceType::NO_TYPE;
+                BB::toggle_bit2(colorPiecesBB[C], qsc_castle_rook_from[C], qsc_castle_rook_to[C]);
+                BB::toggle_bit2(typePiecesBB[ROOK], qsc_castle_rook_from[C], qsc_castle_rook_to[C]);
+                
+                pieceOn[from]= piece;
+                pieceOn[dest]  = NO_TYPE;
+                pieceOn[qsc_castle_rook_from[C]] = ROOK;
+                pieceOn[qsc_castle_rook_to[C]]   = NO_TYPE;
             }
         }
     }
 
 #ifndef NDEBUG
-    valid<C>();
+    // on ne passe ici qu'en debug
+    valid();
 #endif
 }
 
@@ -223,7 +224,10 @@ template <Color C> constexpr void Board::undo_nullmove() noexcept
     pawn_hash = game_history[gamemove_counter].pawn_hash;
 #endif
 
-    assert(valid<C>());
+#ifndef NDEBUG
+    // on ne passe ici qu'en debug
+    valid();
+#endif
 }
 
 

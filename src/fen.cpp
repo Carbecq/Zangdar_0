@@ -66,52 +66,52 @@ void Board::set_fen(const std::string &fen, bool logTactics) noexcept
     for (const auto &c : word) {
         switch (c) {
         case 'P':
-            set_piece(i, Color::WHITE, PieceType::Pawn);
+            set_piece(i, Color::WHITE, PAWN);
             i++;
             break;
         case 'p':
-            set_piece(i, Color::BLACK, PieceType::Pawn);
+            set_piece(i, Color::BLACK, PAWN);
             i++;
             break;
         case 'N':
-            set_piece(i, Color::WHITE, PieceType::Knight);
+            set_piece(i, Color::WHITE, KNIGHT);
             i++;
             break;
         case 'n':
-            set_piece(i, Color::BLACK, PieceType::Knight);
+            set_piece(i, Color::BLACK, KNIGHT);
             i++;
             break;
         case 'B':
-            set_piece(i, Color::WHITE, PieceType::Bishop);
+            set_piece(i, Color::WHITE, BISHOP);
             i++;
             break;
         case 'b':
-            set_piece(i, Color::BLACK, PieceType::Bishop);
+            set_piece(i, Color::BLACK, BISHOP);
             i++;
             break;
         case 'R':
-            set_piece(i, Color::WHITE, PieceType::Rook);
+            set_piece(i, Color::WHITE, ROOK);
             i++;
             break;
         case 'r':
-            set_piece(i, Color::BLACK, PieceType::Rook);
+            set_piece(i, Color::BLACK, ROOK);
             i++;
             break;
         case 'Q':
-            set_piece(i, Color::WHITE, PieceType::Queen);
+            set_piece(i, Color::WHITE, QUEEN);
             i++;
             break;
         case 'q':
-            set_piece(i, Color::BLACK, PieceType::Queen);
+            set_piece(i, Color::BLACK, QUEEN);
             i++;
             break;
         case 'K':
-            set_piece(i, Color::WHITE, PieceType::King);
+            set_piece(i, Color::WHITE, KING);
             x_king[Color::WHITE] = i;
             i++;
             break;
         case 'k':
-            set_piece(i, Color::BLACK, PieceType::King);
+            set_piece(i, Color::BLACK, KING);
             x_king[Color::BLACK] = i;
             i++;
             break;
@@ -163,6 +163,8 @@ void Board::set_fen(const std::string &fen, bool logTactics) noexcept
             castling |= CASTLE_BQ;
             break;
         case '-':
+            break;
+        default:
             break;
         }
     }
@@ -285,7 +287,7 @@ void Board::set_fen(const std::string &fen, bool logTactics) noexcept
         ss >> fullmove_counter;
 
         // Move count: ignore and use zero, as we count since root
-        gamemove_counter = 0;       // numMoves (Ethereal)
+        gamemove_counter = 0;
     }
 
 //-----------------------------------------
@@ -297,11 +299,7 @@ void Board::set_fen(const std::string &fen, bool logTactics) noexcept
 
     //   std::cout << display() << std::endl;
 
-    if (side_to_move == WHITE)
-        assert(valid<WHITE>());
-    else
-        assert(valid<BLACK>());
-
+    assert(valid());
 }
 
 //=========================================================================
@@ -336,53 +334,53 @@ void Board::mirror_fen(const std::string& fen, bool logTactics)
     for (const auto &c : word) {
         switch (c) {
         case 'P':
-            set_piece(Square::flip(i), ~Color::WHITE, PieceType::Pawn);
+            set_piece(SQ::flip_square(i), ~Color::WHITE, PAWN);
             i++;
             break;
         case 'p':
-            set_piece(Square::flip(i), ~Color::BLACK, PieceType::Pawn);
+            set_piece(SQ::flip_square(i), ~Color::BLACK, PAWN);
             i++;
             break;
         case 'N':
-            set_piece(Square::flip(i), ~Color::WHITE, PieceType::Knight);
+            set_piece(SQ::flip_square(i), ~Color::WHITE, KNIGHT);
             i++;
             break;
         case 'n':
-            set_piece(Square::flip(i), ~Color::BLACK, PieceType::Knight);
+            set_piece(SQ::flip_square(i), ~Color::BLACK, KNIGHT);
             i++;
             break;
         case 'B':
-            set_piece(Square::flip(i), ~Color::WHITE, PieceType::Bishop);
+            set_piece(SQ::flip_square(i), ~Color::WHITE, BISHOP);
             i++;
             break;
         case 'b':
-            set_piece(Square::flip(i), ~Color::BLACK, PieceType::Bishop);
+            set_piece(SQ::flip_square(i), ~Color::BLACK, BISHOP);
             i++;
             break;
         case 'R':
-            set_piece(Square::flip(i), ~Color::WHITE, PieceType::Rook);
+            set_piece(SQ::flip_square(i), ~Color::WHITE, ROOK);
             i++;
             break;
         case 'r':
-            set_piece(Square::flip(i), ~Color::BLACK, PieceType::Rook);
+            set_piece(SQ::flip_square(i), ~Color::BLACK, ROOK);
             i++;
             break;
         case 'Q':
-            set_piece(Square::flip(i), ~Color::WHITE, PieceType::Queen);
+            set_piece(SQ::flip_square(i), ~Color::WHITE, QUEEN);
             i++;
             break;
         case 'q':
-            set_piece(Square::flip(i), ~Color::BLACK, PieceType::Queen);
+            set_piece(SQ::flip_square(i), ~Color::BLACK, QUEEN);
             i++;
             break;
         case 'K':
-            set_piece(Square::flip(i), ~Color::WHITE, PieceType::King);
-            x_king[~Color::WHITE] = Square::flip(i);
+            set_piece(SQ::flip_square(i), ~Color::WHITE, KING);
+            x_king[~Color::WHITE] = SQ::flip_square(i);
             i++;
             break;
         case 'k':
-            set_piece(Square::flip(i), ~Color::BLACK, PieceType::King);
-            x_king[~Color::BLACK] = Square::flip(i);
+            set_piece(SQ::flip_square(i), ~Color::BLACK, KING);
+            x_king[~Color::BLACK] = SQ::flip_square(i);
             i++;
             break;
         case '1':
@@ -435,6 +433,8 @@ void Board::mirror_fen(const std::string& fen, bool logTactics)
             break;
         case '-':
             break;
+        default:
+            break;
         }
     }
 
@@ -449,7 +449,7 @@ void Board::mirror_fen(const std::string& fen, bool logTactics)
         char rank = ep.at(1);
         int s = (rank - '1') * 8 + file - 'a';
         assert(s>=A1 && s<=H8);
-        ep_square = Square::flip(s);
+        ep_square = SQ::flip_square(s);
     }
 
     //-----------------------------------------
@@ -528,7 +528,7 @@ void Board::mirror_fen(const std::string& fen, bool logTactics)
         ss >> fullmove_counter;
 
         // Move count: ignore and use zero, as we count since root
-        gamemove_counter = 0;       // numMoves (Ethereal)
+        gamemove_counter = 0;
     }
 
 //-----------------------------------------
@@ -540,10 +540,7 @@ void Board::mirror_fen(const std::string& fen, bool logTactics)
 
     //   std::cout << display() << std::endl;
 
-    if (side_to_move == WHITE)
-        assert(valid<WHITE>());
-    else
-        assert(valid<BLACK>());
+    assert(valid());
 }
 
 //============================================================
@@ -560,9 +557,9 @@ void Board::mirror_fen(const std::string& fen, bool logTactics)
 
         for (int x = 0; x < 8; ++x)
         {
-            const auto sq = Square::square(x, y);
+            const auto sq = SQ::square(x, y);
             const PieceType piece = piece_on(sq);
-            if (piece == PieceType::NO_TYPE) {
+            if (piece == NO_TYPE) {
                 num_empty++;
             } else {
                 // Add the number of empty squares so far
@@ -676,3 +673,22 @@ void Board::parse_position(std::istringstream &is)
 }
 
 
+//==========================================================================
+//! \brief  recherche si le coup "token" est un coup légal,
+//!         puis l'exécute
+//--------------------------------------------------------------------------
+template <Color C>
+void Board::apply_token(const std::string& token) noexcept
+{
+    MoveList ml;
+    legal_moves<C>(ml);
+
+    for (const auto &move : ml.moves)
+    {
+        if (Move::name(move) == token)
+        {
+            make_move<C>(move);
+            break;
+        }
+    }
+}

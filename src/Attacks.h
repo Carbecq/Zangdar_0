@@ -1,28 +1,16 @@
-/*
- *  Code inspiré par BBC et Berserk
- *
- *  Le générateur de nombres aléatoires provient de Stockfish
- *
- */
-
 #ifndef ATTACKS_H
 #define ATTACKS_H
-
-#include <inttypes.h>
-#include <cassert>
-#include <cstdlib>
-#include <cstring>
 
 #if defined USE_PEXT
 #include "immintrin.h"
 #endif
 
-#include "defines.h"
+#include "types.h"
 
+//! \brief  Namespace pour les attaques des différentes pièces
+//!
+namespace  Attacks {
 
-namespace Attacks {
-
-//A lookup table for king move bitboards
 constexpr Bitboard KING_ATTACKS[64] = {
     0x302, 0x705, 0xe0a, 0x1c14,
     0x3828, 0x7050, 0xe0a0, 0xc040,
@@ -237,20 +225,15 @@ extern Bitboard BISHOP_ATTACKS[64][512];
 // rook attacks table [square][occupancies]
 extern Bitboard ROOK_ATTACKS[64][4096];
 
-extern Bitboard BETWEEN_SQS[64][64];
-
-
-void init();
-void calculate_squares_between();
-
-[[nodiscard]] inline Bitboard squares_between(const int sq1, const int sq2) noexcept {
-    return BETWEEN_SQS[sq1][sq2];
-}
-
 // donne l'attaque du pion, pas le déplacement
-[[nodiscard]] constexpr Bitboard pawn_attacks(const int side, const int sq) {
-    return(PAWN_ATTACKS[side][sq]);
+template <Color C>
+[[nodiscard]] constexpr Bitboard pawn_attacks(const int sq) {
+    return(PAWN_ATTACKS[C][sq]);
 }
+[[nodiscard]] constexpr Bitboard pawn_attacks(const int C, const int sq) {
+    return(PAWN_ATTACKS[C][sq]);
+}
+
 
 [[nodiscard]] constexpr Bitboard knight_moves(const int sq) {
     return(KNIGHT_ATTACKS[sq]);
@@ -274,14 +257,23 @@ void calculate_squares_between();
     return ROOK_ATTACKS[sq][static_cast<int>(_pext_u64(occupied, rook_masks[sq]))];
 #else
     return ROOK_ATTACKS[sq][static_cast<int>((occupied & rook_masks[sq]) * rook_magics[sq]
-                                                >> (rook_shifts[sq]))];
+                                             >> (rook_shifts[sq]))];
 #endif
 }
 
 
 [[nodiscard]] inline U64 queen_moves(const int sq, const U64 occupied) {
-    return(rook_moves(sq, occupied) | bishop_moves(sq, occupied));
+    return(Attacks::rook_moves(sq, occupied) | Attacks::bishop_moves(sq, occupied));
 }
 
+Bitboard set_occupancy(int index, int bits_in_mask, Bitboard attack_mask);
+Bitboard bishop_attacks_on_the_fly(int sq, Bitboard block);
+void     init_bishop_attacks();
+Bitboard rook_attacks_on_the_fly(int sq, Bitboard block);
+void     init_rook_attacks();
+
+void init_masks();
+
+
 }
-#endif
+#endif // ATTACKS_H

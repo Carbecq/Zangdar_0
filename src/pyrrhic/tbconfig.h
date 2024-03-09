@@ -39,19 +39,17 @@
  */
 
 // https://github.com/AndyGrant/Pyrrhic/
-
-#include "../defines.h"
-#include "../bitboard.h"
+#include "../Bitboard.h"
 #include "../Attacks.h"
 
 // Population count/Hamming weight
-#define PYRRHIC_POPCOUNT(x)             (Bcount(x))
+#define PYRRHIC_POPCOUNT(x)             (BB::count_bit(x))
 
 // Returns the index of the least significant bit
-#define PYRRHIC_LSB(x)                  (first_square(x))
+#define PYRRHIC_LSB(x)                  (BB::get_lsb(x))
 
 // Returns the index of the least significant bit and unsets it
-#define PYRRHIC_POPLSB(x)               (PYRRHIC_next_square(x))
+#define PYRRHIC_POPLSB(x)               (BB::PYRRHIC_pop_lsb(x))
 
 #define PYRRHIC_PAWN_ATTACKS(sq, c)     (Attacks::pawn_attacks(!c, sq))
 #define PYRRHIC_KNIGHT_ATTACKS(sq)      (Attacks::knight_moves(sq))

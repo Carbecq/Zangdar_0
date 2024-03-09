@@ -24,15 +24,15 @@ namespace Move
 
 Note : la prise enpassant est aussi une capture
 
-les bits 24, 25, 26 sont utilisés pour la Table de Transposition (les numéros commencent à 0)
+les bits 24, 25 sont utilisés pour la Table de Transposition (les numéros commencent à 0)
 
 0000 0111 0000 0000 0000 0000 0000 0000
           <--- move 24 bits        --->
-      ccc hash_code 3 bits
-uuuu u    inutilisés
+       cc hash_code  2 bits
+uuuu uu   inutilisés
 
-il faut 3 bits pour stocker le hash code :
-    HASH_NONE=0 (000), HASH_ALPHA=1 (001), HASH_BETA=2 (010), HASH_EXACT=4 (100)
+il faut 2 bits pour stocker le hash code :
+    HASH_BETA=0 (000), HASH_ALPHA=1 (001), HASH_EXACT=2 (010)
 */
 
 constexpr int     SHIFT_FROM  = 0;
@@ -66,17 +66,21 @@ constexpr U32 MOVE_FLAGS     =     0b111000000000000000000000;
 
 // Special move flags
 constexpr U32 FLAG_NONE      = 0;
-constexpr U32 FLAG_DOUBLE    =     0b001000000000000000000000;
-constexpr U32 FLAG_ENPASSANT =     0b010000000000000000000000;
-constexpr U32 FLAG_CASTLE    =     0b100000000000000000000000;
+//                                       FFFPPPCCCMMMDDDDDDFFFFFF
+constexpr U32 FLAG_DOUBLE    =     0b0000001000000000000000000000;
+constexpr U32 FLAG_ENPASSANT =     0b0000010000000000000000000000;
+constexpr U32 FLAG_CASTLE    =     0b0000100000000000000000000000;
 
-constexpr U32 MOVE_DEPL      = 0b0000111111111000000000000000;
-
-//                                   FFFPPPCCCMMMDDDDDDFFFFFF
-constexpr U32 MOVE_MOVE      = 0b0000111111111111111111111111;
+constexpr U32 MOVE_DEPL      = 0b00000000111111111000000000000000;
 
 //                                       FFFPPPCCCMMMDDDDDDFFFFFF
-constexpr U32 MOVE_CODE      = 0b00000111000000000000000000000000;
+constexpr U32 MOVE_MOVE      = 0b00000000111111111111111111111111;
+
+//                                     TTFFFPPPCCCMMMDDDDDDFFFFFF
+constexpr U32 MOVE_CODE      = 0b00000011000000000000000000000000;
+
+// NULL_MOVE                          NTTFFFPPPCCCMMMDDDDDDFFFFFF
+constexpr U32 MOVE_NULL      = 0b00000100000000000000000000000000;
 
 /* X Y  X&Y  X|Y  X^Y
  * 0 0  0    0    0
@@ -205,7 +209,7 @@ constexpr U32 MOVE_CODE      = 0b00000111000000000000000000000000;
     std::string str;
     str += square_name[move & 0x3F];
     str += square_name[(move >> 6) & 0x3F];
-    if (Move::promotion(move) >= PieceType::Knight)
+    if (Move::promotion(move) >= KNIGHT)
     {
         const char asd[] = {'?', 'p', 'n', 'b', 'r', 'q'};
         str += asd[Move::promotion(move)];
@@ -230,20 +234,20 @@ constexpr U32 MOVE_CODE      = 0b00000111000000000000000000000000;
     std::stringstream ss;
     std::string s;
 
-// ZZ   if ((CASTLE_WK(move) || CASTLE_BK(move) || CASTLE_WQ(move) || CASTLE_BQ(move) ) && (mode != 4))
-//    {
-//            if (CASTLE_WK(move) || CASTLE_BK(move))
-//                ss << "0-0";
-//            else if (CASTLE_WQ(move) || CASTLE_BQ(move))
-//                ss << "0-0-0";
-//    }
-//    else
+    // ZZ   if ((CASTLE_WK(move) || CASTLE_BK(move) || CASTLE_WQ(move) || CASTLE_BQ(move) ) && (mode != 4))
+    //    {
+    //            if (CASTLE_WK(move) || CASTLE_BK(move))
+    //                ss << "0-0";
+    //            else if (CASTLE_WQ(move) || CASTLE_BQ(move))
+    //                ss << "0-0-0";
+    //    }
+    //    else
     {
-        int file_from = Square::file(Move::from(move));
-        int file_to   = Square::file(Move::dest(move));
+        int file_from = SQ::file(Move::from(move));
+        int file_to   = SQ::file(Move::dest(move));
 
-        int rank_from = Square::rank(Move::from(move));
-        int rank_to   = Square::rank(Move::dest(move));
+        int rank_from = SQ::rank(Move::from(move));
+        int rank_to   = SQ::rank(Move::dest(move));
 
         char cfile_from = 'a' + file_from;
         char crank_from = '1' + rank_from;
@@ -258,7 +262,7 @@ constexpr U32 MOVE_CODE      = 0b00000111000000000000000000000000;
             ss << nom_piece_max[ptype];
         }
 
-        if (ptype != PieceType::Pawn)
+        if (ptype != PAWN)
         {
             if (mode == 2)
                 ss << cfile_from;
@@ -273,7 +277,7 @@ constexpr U32 MOVE_CODE      = 0b00000111000000000000000000000000;
         }
         else if (mode == 1)
         {
-            if (ptype == PieceType::Pawn && Move::is_capturing(move))
+            if (ptype == PAWN && Move::is_capturing(move))
                 ss << cfile_from;
         }
 

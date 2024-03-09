@@ -41,7 +41,7 @@ void Board::add_capture_move(MoveList& ml, int from, int dest, PieceType piece, 
 //-----------------------------------------------------------------
 void Board::add_quiet_promotion(MoveList& ml, int from, int dest, PieceType promo) const noexcept
 {
-    ml.moves[ml.count++] = Move::CODE(from, dest, PieceType::Pawn, PieceType::NO_TYPE, promo, Move::FLAG_NONE);
+    ml.moves[ml.count++] = Move::CODE(from, dest, PAWN, PieceType::NO_TYPE, promo, Move::FLAG_NONE);
 }
 
 //=================================================================
@@ -57,7 +57,7 @@ void Board::add_quiet_promotion(MoveList& ml, int from, int dest, PieceType prom
 //-----------------------------------------------------------------
 void Board::add_capture_promotion(MoveList& ml, int from, int dest, PieceType captured, PieceType promo) const noexcept
 {
-    ml.moves[ml.count++]  = Move::CODE(from, dest, PieceType::Pawn, captured, promo, Move::FLAG_NONE);
+    ml.moves[ml.count++]  = Move::CODE(from, dest, PAWN, captured, promo, Move::FLAG_NONE);
 }
 
 
@@ -71,8 +71,8 @@ void Board::push_quiet_moves(MoveList& ml, Bitboard attack, const int from)
     int to;
 
     while (attack) {
-        to = next_square(attack);
-        add_quiet_move(ml, from, to, cpiece[from], Move::FLAG_NONE);
+        to = BB::pop_lsb(attack);
+        add_quiet_move(ml, from, to, pieceOn[from], Move::FLAG_NONE);
     }
 }
 void Board::push_capture_moves(MoveList& ml, Bitboard attack, const int from)
@@ -80,8 +80,8 @@ void Board::push_capture_moves(MoveList& ml, Bitboard attack, const int from)
     int to;
 
     while (attack) {
-        to = next_square(attack);
-        add_capture_move(ml, from, to, cpiece[from], cpiece[to], Move::FLAG_NONE);
+        to = BB::pop_lsb(attack);
+        add_capture_move(ml, from, to, pieceOn[from], pieceOn[to], Move::FLAG_NONE);
     }
 }
 
@@ -90,7 +90,7 @@ void Board::push_piece_quiet_moves(MoveList& ml, Bitboard attack, const int from
     int to;
 
     while (attack) {
-        to = next_square(attack);
+        to = BB::pop_lsb(attack);
         add_quiet_move(ml, from, to, piece, Move::FLAG_NONE);
     }
 }
@@ -100,8 +100,8 @@ void Board::push_piece_capture_moves(MoveList& ml, Bitboard attack, const int fr
     int to;
 
     while (attack) {
-        to = next_square(attack);
-        add_capture_move(ml, from, to, piece, cpiece[to], Move::FLAG_NONE);
+        to = BB::pop_lsb(attack);
+        add_capture_move(ml, from, to, piece, pieceOn[to], Move::FLAG_NONE);
     }
 }
 
@@ -112,7 +112,7 @@ void Board::push_quiet_promotions(MoveList& ml, Bitboard attack, const int dir) 
     int to;
 
     while (attack) {
-        to = next_square(attack);
+        to = BB::pop_lsb(attack);
         push_quiet_promotion(ml, to - dir, to);
     }
 }
@@ -120,23 +120,23 @@ void Board::push_capture_promotions(MoveList& ml, Bitboard attack, const int dir
     int to;
 
     while (attack) {
-        to = next_square(attack);
+        to = BB::pop_lsb(attack);
         push_capture_promotion(ml, to - dir, to);
     }
 }
 
 /* Append promotions from the same move */
 void Board::push_quiet_promotion(MoveList& ml, const int from, const int to) {
-    add_quiet_promotion(ml, from, to, PieceType::Queen);
-    add_quiet_promotion(ml, from, to, PieceType::Knight);
-    add_quiet_promotion(ml, from, to, PieceType::Rook);
-    add_quiet_promotion(ml, from, to, PieceType::Bishop);
+    add_quiet_promotion(ml, from, to, QUEEN);
+    add_quiet_promotion(ml, from, to, KNIGHT);
+    add_quiet_promotion(ml, from, to, ROOK);
+    add_quiet_promotion(ml, from, to, BISHOP);
 }
 void Board::push_capture_promotion(MoveList& ml, const int from, const int to) {
-    add_capture_promotion(ml, from, to, cpiece[to], PieceType::Queen);
-    add_capture_promotion(ml, from, to, cpiece[to], PieceType::Knight);
-    add_capture_promotion(ml, from, to, cpiece[to], PieceType::Rook);
-    add_capture_promotion(ml, from, to, cpiece[to], PieceType::Bishop);
+    add_capture_promotion(ml, from, to, pieceOn[to], QUEEN);
+    add_capture_promotion(ml, from, to, pieceOn[to], KNIGHT);
+    add_capture_promotion(ml, from, to, pieceOn[to], ROOK);
+    add_capture_promotion(ml, from, to, pieceOn[to], BISHOP);
 }
 
 //--------------------------------------
@@ -147,8 +147,8 @@ void Board::push_pawn_quiet_moves(MoveList& ml, Bitboard attack, const int dir, 
     int to;
 
     while (attack) {
-        to = next_square(attack);
-        add_quiet_move(ml, to - dir, to, PieceType::Pawn, flags);
+        to = BB::pop_lsb(attack);
+        add_quiet_move(ml, to - dir, to, PAWN, flags);
     }
 }
 void Board::push_pawn_capture_moves(MoveList& ml, Bitboard attack, const int dir)
@@ -156,8 +156,8 @@ void Board::push_pawn_capture_moves(MoveList& ml, Bitboard attack, const int dir
     int to;
 
     while (attack) {
-        to = next_square(attack);
-        add_capture_move(ml, to - dir, to, PieceType::Pawn, cpiece[to], Move::FLAG_NONE);
+        to = BB::pop_lsb(attack);
+        add_capture_move(ml, to - dir, to, PAWN, pieceOn[to], Move::FLAG_NONE);
     }
 }
 

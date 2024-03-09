@@ -7,9 +7,16 @@ class Search;
 #include <thread>
 #include "defines.h"
 #include "Timer.h"
-#include "SearchInfo.h"
+#include "OrderInfo.h"
 #include "Board.h"
+#include "types.h"
 
+// STACK_OFFSET permet de faire "ply-x" en évitant un test
+constexpr int STACK_OFFSET = 4;
+constexpr int STACK_SIZE   = MAX_PLY + STACK_OFFSET;
+
+
+//! \brief  Données d'une thread
 struct ThreadData {
     std::thread thread;
     U64         nodes;
@@ -22,12 +29,15 @@ struct ThreadData {
     int         depth;
     int         seldepth;
     bool        stopped;
+    
+    OrderInfo   order;
+    Score       eval_stack[STACK_SIZE];     // évaluation statique
+    MOVE        move_stack[STACK_SIZE];     // coups cherchés
+    Score*      eval;
+    MOVE*       move;
 
-    SearchInfo  info;
 
 }__attribute__((aligned(64)));
-
-#include "Board.h"
 
 
 // classe permettant de redéfinir mon 'locale'
@@ -68,6 +78,8 @@ private:
     void update_pv(PVariation &pv, const PVariation &new_pv, const MOVE move) const;
 
     static constexpr int CONTEMPT    = 0;           // TODO : option ?
+    static constexpr int NULL_MOVE_R = 2;    // réduction de la profondeur de recherche
+    static constexpr int CurrmoveTimerMS = 2500;
 
     int Reductions[2][32][32];
 

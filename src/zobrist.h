@@ -1,7 +1,6 @@
 #ifndef LIBCHESS_ZOBRIST_HPP
 #define LIBCHESS_ZOBRIST_HPP
 
-#include <cstdint>
 #include "defines.h"
 
 // valeurs calculées à l'aide du programme rng

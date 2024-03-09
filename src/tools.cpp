@@ -1,10 +1,8 @@
 #include <string>
 #include <vector>
 #include <iostream>
-#include <bitset>
 #include <sstream>
 #include <fstream>
-
 #include "defines.h"
 
 //======================================================================
@@ -37,3 +35,4 @@ void printlog(const std::string& message)
       myfile << message << std::endl;
       myfile.close();
 }
+

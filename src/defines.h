@@ -7,20 +7,30 @@
 #include <iostream>
 #include <bitset>
 
+// ne pas oublier la version dans Zangdar.pro
+
 #define USE_HASH
-#define USE_PAWN_CACHE
 
 #define USE_RAZORING
 #define USE_REVERSE_FUTILITY_PRUNING
 #define USE_NULL_MOVE_PRUNING
 #define USE_PROBCUT
 #define USE_INTERNAL_ITERATIVE_DEEPENING
+//#define USE_FUTILITY_PRUNING
 #define USE_LATE_MOVE_PRUNING
+#define USE_SINGULAR_EXTENSION
 #define USE_LATE_MOVE_REDUCTION
 
-// NE PAS UTILISER PRETTY avec Arena (score mal affiché)
+#define USE_TC_WEISS
+
+//#define USE_ACC
+
+// NE PAS UTILISER PRETTY avec
+//      + Arena (score mal affiché)
+//      + test STS
 //#define USE_PRETTY
 
+#define TT_SUNGORUS
 
 /*******************************************************
  **	Généralités
@@ -39,7 +49,8 @@ using UCHAR = unsigned char;
 
 using Bitboard  = U64;
 using MOVE      = U32;
-using Score     = int;
+
+using Score = int;  // Valeur spéciale contenant à la fois mg et eg
 
 static constexpr int MAX_PLY    = 128;     // profondeur max de recherche (en demi-coups)
 static constexpr int MAX_HIST   = 800;     // longueur max de la partie (en demi-coups)
@@ -116,10 +127,10 @@ const std::string Version = VERSION;
 const std::string Version = "2";
 #endif
 
-extern std::vector<std::string> split(const std::string& s, char delimiter);
+//=========================================================
+
 extern void printlog(const std::string& message);
-
-
+extern std::vector<std::string> split(const std::string& s, char delimiter);
 
 //======================================
 //! \brief Ecriture en binaire
@@ -130,5 +141,6 @@ void binary_print(T code, const std::string& message)
     std::string binary = std::bitset<8*sizeof(T)>(code).to_string(); //to binary
     std::cout << message << " : " << binary<< std::endl;
 }
+
 
 #endif // DEFINES_H

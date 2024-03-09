@@ -1,10 +1,10 @@
 #include <iostream>
 #include "Board.h"
 #include "defines.h"
-#include <cassert>
 #include "Move.h"
 
-template <Color C> [[nodiscard]] std::uint64_t Board::perft(const int depth) noexcept
+template <Color C>
+[[nodiscard]] std::uint64_t Board::perft(const int depth) noexcept
 {
     if (depth == 0)
         return 1;
@@ -60,7 +60,7 @@ template <Color C> [[nodiscard]] std::uint64_t Board::divide(const int depth) no
 //        const auto promo    = Move::promotion(move);
 
 //        printf("move  = (%s) \n", Move::name(move).c_str());
-//        binary_print(move);
+//        binary_print(move, "message");
 //        printf("from  = %s \n", square_name[from].c_str());
 //        printf("dest  = %s \n", square_name[to].c_str());
 //        printf("piece = %s \n", piece_name[piece].c_str());

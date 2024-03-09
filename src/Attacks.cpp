@@ -1,23 +1,11 @@
-/*
- *  Code provenant de BBC
- */
-
-#include <random>
-#include "Attacks.h"
-#include "bitmask.h"
 #include "Square.h"
-
-Bitboard RankMask64[64] = {0};
-Bitboard FileMask64[64] = {0};
-Bitboard DiagonalMask64[64] = {0};
-Bitboard AntiDiagonalMask64[64] = {0};
-Bitboard SquareMask64[64] = {0};
+#include "Attacks.h"
 
 namespace Attacks {
 
-Bitboard ROOK_ATTACKS  [64][4096]{};
-Bitboard BISHOP_ATTACKS[64][ 512]{};
-Bitboard BETWEEN_SQS[64][64];
+Bitboard ROOK_ATTACKS  [N_SQUARES][4096]{};
+Bitboard BISHOP_ATTACKS[N_SQUARES][ 512]{};
+
 
 //======================================================
 //! \brief  set occupancies
@@ -32,7 +20,7 @@ Bitboard set_occupancy(int index, int bits_in_mask, Bitboard attack_mask)
     {
         // get LS1B index of attacks mask
         // pop LS1B in attack map
-        int sq = next_square(attack_mask);
+        int sq = BB::pop_lsb(attack_mask);
 
         // make sure occupancy is on board
         if (index & (1 << count))
@@ -53,32 +41,32 @@ Bitboard bishop_attacks_on_the_fly(int sq, Bitboard block)
     Bitboard attacks = 0;
 
     // init target rank & files
-    int sr = Square::rank(sq);
-    int sf = Square::file(sq);
+    int sr = SQ::rank(sq);
+    int sf = SQ::file(sq);
 
     // generate bishop atacks
     for (int r = sr + 1, f = sf + 1; r <= 7 && f <= 7; r++, f++)
     {
         attacks |= (1ULL << (r * 8 + f));
-        if (get_bit(block, r * 8 + f))
+        if (BB::get_bit(block, r * 8 + f))
             break;
     }
 
     for (int r = sr - 1, f = sf + 1; r >= 0 && f <= 7; r--, f++) {
         attacks |= (1ULL << (r * 8 + f));
-        if (get_bit(block, r * 8 + f))
+        if (BB::get_bit(block, r * 8 + f))
             break;
     }
 
     for (int r = sr + 1, f = sf - 1; r <= 7 && f >= 0; r++, f--) {
         attacks |= (1ULL << (r * 8 + f));
-        if (get_bit(block, r * 8 + f))
+        if (BB::get_bit(block, r * 8 + f))
             break;
     }
 
     for (int r = sr - 1, f = sf - 1; r >= 0 && f >= 0; r--, f--) {
         attacks |= (1ULL << (r * 8 + f));
-        if (get_bit(block, r * 8 + f))
+        if (BB::get_bit(block, r * 8 + f))
             break;
     }
 
@@ -127,31 +115,31 @@ Bitboard rook_attacks_on_the_fly(int sq, Bitboard block)
     Bitboard attacks = 0;
 
     // init target rank & files
-    int sr = Square::rank(sq);
-    int sf = Square::file(sq);
+    int sr = SQ::rank(sq);
+    int sf = SQ::file(sq);
 
     // generate rook attacks
     for (int r = sr + 1; r <= 7; r++) {
         attacks |= (1ULL << (r * 8 + sf));
-        if (get_bit(block, r * 8 + sf))
+        if (BB::get_bit(block, r * 8 + sf))
             break;
     }
 
     for (int r = sr - 1; r >= 0; r--) {
         attacks |= (1ULL << (r * 8 + sf));
-        if (get_bit(block, r * 8 + sf))
+        if (BB::get_bit(block, r * 8 + sf))
             break;
     }
 
     for (int f = sf + 1; f <= 7; f++) {
         attacks |= (1ULL << (sr * 8 + f));
-        if (get_bit(block, sr * 8 + f))
+        if (BB::get_bit(block, sr * 8 + f))
             break;
     }
 
     for (int f = sf - 1; f >= 0; f--) {
         attacks |= (1ULL << (sr * 8 + f));
-        if (get_bit(block, sr * 8 + f))
+        if (BB::get_bit(block, sr * 8 + f))
             break;
     }
 
@@ -191,56 +179,13 @@ void init_rook_attacks()
     }
 }
 
-void calculate_squares_between()
+//================================================
+//  Initialisation des attaques
+//------------------------------------------------
+void init_masks()
 {
-    for (int i = 0; i < 64; ++i) {
-        for (int j = 0; j < 64; ++j) {
-            auto sq1 = i;
-            auto sq2 = j;
-
-            const auto dx = (Square::file(sq2) - Square::file(sq1));
-            const auto dy = (Square::rank(sq2) - Square::rank(sq1));
-            const auto adx = dx > 0 ? dx : -dx;
-            const auto ady = dy > 0 ? dy : -dy;
-
-            if (dx == 0 || dy == 0 || adx == ady)
-            {
-                Bitboard mask = 0ULL;
-                while (sq1 != sq2) {
-                    if (dx > 0) {
-                        sq1 = Square::east(sq1);
-                    } else if (dx < 0) {
-                        sq1 = Square::west(sq1);
-                    }
-                    if (dy > 0) {
-                        sq1 = Square::north(sq1);
-                    } else if (dy < 0) {
-                        sq1 = Square::south(sq1);
-                    }
-                    mask |= square_to_bit(sq1);
-                }
-                BETWEEN_SQS[i][j] = mask & ~square_to_bit(sq2);
-            }
-        }
-    }
-}
-
-//======================================================
-void init()
-{
-    for (int sq = 0; sq < 64; ++sq)
-    {
-        SquareMask64[sq]       = 1ULL << sq;
-
-        RankMask64[sq]         = RankMask8[sq >> 3] & ~SquareMask64[sq];
-        FileMask64[sq]         = FileMask8[sq & 7] & ~SquareMask64[sq];
-        DiagonalMask64[sq]     = DiagMask16[((sq >> 3) - (sq & 7)) & 15] & ~SquareMask64[sq];
-        AntiDiagonalMask64[sq] = ADiagMask16[((sq >> 3) + (sq & 7)) ^ 7] & ~SquareMask64[sq];
-    }
-
     init_bishop_attacks();
     init_rook_attacks();
-    calculate_squares_between();
 }
 
 } // namespace

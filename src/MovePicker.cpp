@@ -6,11 +6,11 @@
 //=====================================================
 //! \brief  Constructeur
 //-----------------------------------------------------
-MovePicker::MovePicker(Board* _board, const SearchInfo* _search_info,
-                       MOVE _ttMove, MOVE _killer1, MOVE _killer2,
+MovePicker::MovePicker(Board* _board, const OrderInfo* _order_info,
+                       MOVE _ttMove, MOVE _killer1, MOVE _killer2, MOVE _counter,
                        bool _skipQuiets, int _threshold) :
     board(_board),
-    search_info(_search_info),
+    order_info(_order_info),
     skipQuiets(_skipQuiets),
     stage(STAGE_TABLE),
     gen_quiet(false),
@@ -18,9 +18,99 @@ MovePicker::MovePicker(Board* _board, const SearchInfo* _search_info,
     threshold(_threshold),
     tt_move(_ttMove),
     killer1(_killer1),
-    killer2(_killer2)
+    killer2(_killer2),
+    counter(_counter)
 {
+#if 0
+    int nbr_noisy = 0;
+    int nbr_quiet = 0;
+    int nbr_capt = 0;
+    int nbr_promo = 0;
+    int nbr_capt_promo = 0;
+    int nbr_pep = 0;
 
+    if (board->turn() == WHITE)
+    {
+        board->legal_moves<WHITE>(mll);
+        // _board->legal_noisy<WHITE>(mln);
+        // _board->legal_quiet<WHITE>(mlq);
+    }
+    else
+    {
+        board->legal_moves<BLACK>(mll);
+        // _board->legal_noisy<BLACK>(mln);
+        // _board->legal_quiet<BLACK>(mlq);
+    }
+
+    for (int i=0; i<mll.count; i++)
+    {
+
+        if (Move::is_capturing(mll.moves[i]))
+        {
+            if (Move::is_promoting(mll.moves[i]))
+            {
+                nbr_capt_promo++;
+                mln.moves[mln.count++] = mll.moves[i];
+                nbr_noisy++;
+            }
+            else if (!Move::is_promoting(mll.moves[i]))
+            {
+                nbr_capt++;
+                mln.moves[mln.count++] = mll.moves[i];
+                nbr_noisy++;
+            }
+
+        }
+        else if (Move::is_promoting(mll.moves[i]))
+        {
+            nbr_promo++;
+            mln.moves[mln.count++] = mll.moves[i];
+            nbr_noisy++;
+        }
+        else if(Move::is_enpassant(mll.moves[i]))
+        {
+            nbr_pep++;
+            mln.moves[mln.count++] = mll.moves[i];
+            nbr_noisy++;
+        }
+        else
+        {
+            mlq.moves[mlq.count++] = mll.moves[i];
+            nbr_quiet++;
+        }
+    }
+
+    if (mll.count != (nbr_noisy + nbr_quiet))
+    {
+        std::cout << ">>>>>>>>>>> erreur 1 " << std::endl;
+        std::cout << "nbr_noisy =  " << nbr_noisy << std::endl;
+        std::cout << "nbr_capt =  " << nbr_capt << std::endl;
+        std::cout << "nbr_promo =  " << nbr_promo << std::endl;
+        std::cout << "nbr_pep =  " << nbr_pep << std::endl;
+        std::cout << "nbr_noisy =  " << mln.count << std::endl;
+    }
+
+    if (nbr_noisy != (nbr_capt+nbr_capt_promo+nbr_promo+nbr_pep))
+    {
+        std::cout << ">>>>>>>>>>> erreur 2 " << std::endl;
+        std::cout << "nbr_noisy =  " << nbr_noisy << std::endl;
+        std::cout << "nbr_capt =  " << nbr_capt << std::endl;
+        std::cout << "nbr_capt_promo =  " << nbr_capt_promo << std::endl;
+        std::cout << "nbr_promo =  " << nbr_promo << std::endl;
+        std::cout << "nbr_pep =  " << nbr_pep << std::endl;
+        std::cout << "nbr_noisy =  " << mln.count << std::endl;
+    }
+
+
+    if (nbr_noisy != mln.count)
+        std::cout << ">>>>>>>>>>> erreur 3 " << std::endl;
+
+    if (nbr_quiet != mlq.count)
+        std::cout << ">>>>>>>>>>> erreur 4 " << std::endl;
+
+    score_noisy(board);
+    score_quiet(board);
+#endif
 }
 
 
@@ -99,17 +189,18 @@ MOVE MovePicker::next_move()
         // position, and also advance to the next stage
         stage = STAGE_KILLER_2;
 
-        if (!skipQuiets && killer1 != tt_move)
+        if (   !skipQuiets
+            && killer1 != tt_move)
         {
-            if (gen_quiet == false)
-            {
-                if (board->turn() == WHITE)
-                    board->legal_quiet<WHITE>(mlq);
-                else
-                    board->legal_quiet<BLACK>(mlq);
-                gen_quiet = true;
-                score_quiet();
-            }
+            // if (gen_quiet == false)
+            // {
+            //     if (board->turn() == WHITE)
+            //         board->legal_quiet<WHITE>(mlq);
+            //     else
+            //         board->legal_quiet<BLACK>(mlq);
+            //     gen_quiet = true;
+            //     score_quiet();
+            // }
             if (is_legal(killer1))
                 return killer1;
         }
@@ -120,21 +211,48 @@ MOVE MovePicker::next_move()
 
         // Play the killer move if it is from this position.
         // position, and also advance to the next stage
-        stage = STAGE_GENERATE_QUIET;
+        stage = STAGE_COUNTER_MOVE;
 
-        if (!skipQuiets && killer2 != tt_move)
+        if (   !skipQuiets
+            && killer2 != tt_move)
         {
-            if (gen_quiet == false)
-            {
-                if (board->turn() == WHITE)
-                    board->legal_quiet<WHITE>(mlq);
-                else
-                    board->legal_quiet<BLACK>(mlq);
-                gen_quiet = true;
-                score_quiet();
-            }
+            // if (gen_quiet == false)
+            // {
+            //     if (board->turn() == WHITE)
+            //         board->legal_quiet<WHITE>(mlq);
+            //     else
+            //         board->legal_quiet<BLACK>(mlq);
+            //     gen_quiet = true;
+            //     score_quiet();
+            // }
             if (is_legal(killer2))
                 return killer2;
+        }
+
+        /* fallthrough */
+
+    case STAGE_COUNTER_MOVE:
+
+        // Play the counter move if it is from this position.
+        // position, and also advance to the next stage
+        stage = STAGE_GENERATE_QUIET;
+
+        if (   !skipQuiets
+            && counter != tt_move
+            && counter != killer1
+            && counter != killer2)
+        {
+            // if (gen_quiet == false)
+            // {
+            //     if (board->turn() == WHITE)
+            //         board->legal_quiet<WHITE>(mlq);
+            //     else
+            //         board->legal_quiet<BLACK>(mlq);
+            //     gen_quiet = true;
+            //     score_quiet();
+            // }
+            if (is_legal(counter))
+                return counter;
         }
 
         /* fallthrough */
@@ -169,7 +287,8 @@ MOVE MovePicker::next_move()
 
             if (   bestMove == tt_move
                 || bestMove == killer1
-                || bestMove == killer2  /*|| m == moves->counter */)
+                || bestMove == killer2
+                || bestMove == counter )
                 return next_move();
             else
                 return bestMove;
@@ -188,14 +307,17 @@ MOVE MovePicker::next_move()
             MOVE bestMove = pop_move(mlb, best);
 
             // Don't play the table move twice
-            if (bestMove == tt_move)
+            if (   bestMove == tt_move
+                || bestMove == killer1
+                || bestMove == killer2
+                || bestMove == counter )
                 return next_move();
             return bestMove;
         }
 
         stage = STAGE_DONE;
-        //    return Move::MOVE_NONE;
 
+        /* fallthrough */
 
     case STAGE_DONE:
         return Move::MOVE_NONE;
@@ -232,12 +354,12 @@ void MovePicker::score_noisy()
 
         // A bonus is in order for queen promotions
         if (Move::is_promoting(move))
-            value += eg_value[Move::promotion(move)];
+            value += EGPieceValue[Move::promotion(move)];
 
         // Enpass is a special case of MVV-LVA
         else if (Move::is_enpassant(move))
-            value = MvvLvaScores[Pawn][Pawn];
-                // eg_value[PieceType::Pawn] - PieceType::Pawn;
+            value = MvvLvaScores[PAWN][PAWN];
+                // eg_value[PAWN] - PAWN;
 
         mln.values[i] = value;
     }
@@ -250,7 +372,7 @@ void MovePicker::score_quiet()
 {
     // Use the History score from the Butterfly Bitboards for sorting
     for (size_t i = 0; i < mlq.count; i++)
-        mlq.values[i] = search_info->get_history(board->turn(), mlq.moves[i]);
+        mlq.values[i] = order_info->get_history(board->turn(), mlq.moves[i]);
 }
 
 //====================================================
@@ -328,133 +450,13 @@ bool MovePicker::is_legal(MOVE move)
     return false;
 }
 
-//==============================================
-//  Ancien MovePicker
-//==============================================
-
-//=====================================================
-//! \brief  Constructeur
-//-----------------------------------------------------
-MovePicker::MovePicker(int ply, const MOVE tt_move,
-                       const SearchInfo *m_SearchInfo, Board *m_board, MoveList *m_moveList)
-{
-    move_list    = m_moveList;
-    board        = m_board;
-    search_info  = m_SearchInfo;
-    currHead     = 0;
-
-    scoreMoves(ply, tt_move);
-}
-
-//=========================================================
-//! \brief  Donne un bonus aux coups, de façon à les trier
-//!
-//! A typical move ordering consists as follows:
-//!
-//! 1) PV-move of the principal variation from the previous iteration
-//!     of an iterative deepening framework for the leftmost path, often implicitly done by (2).
-//! 2) Hash move from hash tables
-//! 3) Winning captures/promotions
-//! 4) Equal captures/promotions
-//! 5) Killer moves (non capture), often with mate killers first
-//! 6) Non-captures sorted by history heuristic and that like
-//! 7) Losing captures (* but see below)
-//!
-//! https://www.chessprogramming.org/Move_Ordering
-//---------------------------------------------------------
-void MovePicker::scoreMoves(int ply, const MOVE tt_move)
-{
-    MOVE Killer1  = search_info->killer1[ply];
-    MOVE Killer2  = search_info->killer2[ply];
-
-    for (size_t index=0; index<move_list->size(); index++)
-    {
-        MOVE move = move_list->moves[index];
-
-        if (tt_move != 0 && move == tt_move)
-        {
-            move_list->values[index] = ( 1000000 );
-        }
-        else if (Move::is_capturing(move))
-        {
-            //            if (captured > piece)
-            //            {
-            //                move_list->values[index] = GOOD_CAPTURE + MvvLvaScores[captured][piece];
-            //            }
-            //            else
-            //            {
-            //                //int v = board->see(move);
-            //                bool b = board->fast_see(move, 0);
-            //                if (b)
-            //                    move_list->values[index] = GOOD_CAPTURE + MvvLvaScores[captured][piece];
-            //                else
-            //                    move_list->values[index] = BAD_CAPTURE + MvvLvaScores[captured][piece];
-            //            }
-            move_list->values[index] = GOOD_CAPTURE + MvvLvaScores[Move::captured(move)][Move::piece(move)];
-        }
-        //       else if (Move::is_enpassant(move))
-        //        {
-        //            move_list->values[index] = GOOD_CAPTURE + MvvLvaScores[Pawn][Pawn];
-        //        }
-        else if (Move::is_promoting(move))
-        {
-            move_list->values[index] = PROMOTION_BONUS + mg_value[Move::promotion(move)];
-        }
-        else if (move == Killer1)
-        {
-            move_list->values[index] = KILLER1_BONUS;
-        }
-        else if (move == Killer2)
-        {
-            move_list->values[index] = KILLER2_BONUS;
-        }
-        else
-        { // Quiet
-            // PieceType piece = Move::piece(move);
-            // int dest = Move::dest(move);
-            move_list->values[index] = QUIET_BONUS + search_info->get_history(board->side_to_move, move);
-        }
-    }
-}
-
-//============================================================
-//! \brief  Retourne true s'il reste des coups à retirer
-//------------------------------------------------------------
-bool MovePicker::hasNext() const
-{
-    return currHead < move_list->size();
-}
-
-//=============================================================
-//! \brief  Recherche le meilleur coup à partir de next
-//-------------------------------------------------------------
-MOVE MovePicker::getNext()
-{
-    size_t bestIndex = currHead;
-    int    bestScore = -INFINITE;
-
-    for (size_t index = currHead; index < move_list->count; index++)
-    {
-        if (move_list->values[index] > bestScore)
-        {
-            bestScore = move_list->values[index];
-            bestIndex = index;
-        }
-    }
-
-    if (currHead != bestIndex)
-        move_list->swap(currHead, bestIndex);
-
-    return(move_list->moves[currHead++]);
-}
-
 
 std::string pchar[7] = {"NoPiece", "Pion", "Cavalier", "Fou", "Tour", "Dame", "Roi"};
 void MovePicker::verify_MvvLva()
 {
-   for(int Victim = PieceType::Pawn; Victim <= PieceType::King; ++Victim)
+   for(int Victim = PAWN; Victim <= KING; ++Victim)
    {
-       for(int Attacker = PieceType::Pawn; Attacker <= PieceType::King; ++Attacker)
+       for(int Attacker = PAWN; Attacker <= KING; ++Attacker)
        {
            printf("%10s prend %10s = %d\n", pchar[Attacker].c_str(), pchar[Victim].c_str(), MvvLvaScores[Victim][Attacker]);
        }

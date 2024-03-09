@@ -5,10 +5,9 @@
 //  Voir le site de Moreland
 //  Code provenant du code Sungorus (merci à lui)
 
-static constexpr int BOUND_NONE  = 0;
-static constexpr int BOUND_LOWER = 1;   // hash_beta    Cut-nodes (Knuth's Type 2), otherwise known as fail-high nodes, are nodes in which a beta-cutoff was performed.
-static constexpr int BOUND_UPPER = 2;   // hash_alpha   All-nodes (Knuth's Type 3), otherwise known as fail-low nodes, are nodes in which no move's score exceeded alpha
-static constexpr int BOUND_EXACT = 4;   //              PV-node   (Knuth's Type 1) are nodes that have a score that ends up being inside the window
+static constexpr int BOUND_LOWER = 0;   // hash_beta    Cut-nodes (Knuth's Type 2), otherwise known as fail-high nodes, are nodes in which a beta-cutoff was performed.
+static constexpr int BOUND_UPPER = 1;   // hash_alpha   All-nodes (Knuth's Type 3), otherwise known as fail-low nodes, are nodes in which no move's score exceeded alpha
+static constexpr int BOUND_EXACT = 2;   //              PV-node   (Knuth's Type 1) are nodes that have a score that ends up being inside the window
 
 class TranspositionTable;
 
@@ -35,6 +34,18 @@ struct PawnHashEntry {
 
 //----------------------------------------------------------
 
+/* Remarques
+ *  1) le "hash_code" est mis dans "move" comme score
+ *  2) dans Koivisto, la date (ou age) est mise dans move (8 bits) comme score
+ */
+
+// 134 217 728 = 2 ^ 27 = 128 Mo
+// 0000 1000 0000 0000 0000 0000 0000 0000
+//
+//  8388608 entries of 16 for a total of 134217728
+//
+// tt_size = 8388608 = 100000000000000000000000 = 2 ^ 23
+//
 // tt_mask = tt_size - 4 = 0111 1111 1111 1111 1111 1100    : index multiple de 4
 // tt_mask = tt_size - 2 = 0111 1111 1111 1111 1111 1110
 // tt_mask = tt_size - 1 = 0111 1111 1111 1111 1111 1111
@@ -85,8 +96,8 @@ public:
 
     //------------------------------------------------
 
-    bool probe_pawn_table(U64 hash, Score &eval);
-    void store_pawn_table(U64 hash, Score eval);
+    bool probe_pawn_table(U64 hash, Score &eval, Bitboard &passed);
+    void store_pawn_table(U64 hash, Score eval, Bitboard passed);
 };
 
 extern TranspositionTable transpositionTable;

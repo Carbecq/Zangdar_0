@@ -312,7 +312,7 @@ enum {
     PYRRHIC_PROMOTES_KNIGHT = 4,
 };
 
-enum {
+enum pyrrhic_prime : uint64_t { // il faut mettre le type uint64_t pour éviter une erreur avec CLANG
 
     PYRRHIC_PROMOSQS      = 0XFF000000000000FFULL,
 

@@ -5,7 +5,7 @@ class MovePicker;
 
 #include "MoveList.h"
 #include "Board.h"
-#include "SearchInfo.h"
+#include "OrderInfo.h"
 
 
 enum {
@@ -14,6 +14,7 @@ enum {
     STAGE_GOOD_NOISY,
     STAGE_KILLER_1,
     STAGE_KILLER_2,
+    STAGE_COUNTER_MOVE,
     STAGE_GENERATE_QUIET,
     STAGE_QUIET,
     STAGE_BAD_NOISY,
@@ -30,17 +31,6 @@ constexpr int MvvLvaScores[N_PIECES][N_PIECES] = {
     {0,  0,  0,  0,  0,  0,  0}  // victim King
 };
 
-/**
- * @brief Bonuses applied to specific move types.
- * @{
- */
-constexpr int GOOD_CAPTURE       = 400000;
-constexpr int PROMOTION_BONUS    = 300000;
-constexpr int KILLER1_BONUS      = 200000;
-constexpr int KILLER2_BONUS      = 150000;
-constexpr int COUNTERMOVE_BONUS  =  50000;
-constexpr int QUIET_BONUS        =      0;
-constexpr int BAD_CAPTURE        = -20000;
 
 /**
  * @brief Class for an object that picks moves from a move list in an optimal order.
@@ -53,12 +43,11 @@ constexpr int BAD_CAPTURE        = -20000;
 class MovePicker
 {
 public:
-    MovePicker(int ply, const MOVE tt_move,
-               const SearchInfo *orderingInfo,
-               Board *board,
-               MoveList *moveList);
 
-    MovePicker(Board *_board, const SearchInfo *_search_info, MOVE _ttMove, MOVE _killer1, MOVE _killer2, bool _skipQuiets, int _threshold) ;
+    MovePicker(Board *_board, const OrderInfo *_order_info, MOVE _ttMove,
+               MOVE _killer1, MOVE _killer2,
+               MOVE _counter,
+               bool _skipQuiets, int _threshold) ;
 
     MOVE next_move();
     void score_noisy();
@@ -79,7 +68,7 @@ public:
 
 private:
     Board*              board;
-    const SearchInfo*   search_info;
+    const OrderInfo*    order_info;
     bool                skipQuiets;    // sauter les coups tranquilles ?
     int                 stage;         // étape courante du sélecteur
     bool                gen_quiet;     // a-t-on déjà générer les coups tranquilles ?
@@ -89,6 +78,7 @@ private:
     MOVE tt_move;
     MOVE killer1;
     MOVE killer2;
+    MOVE counter;
 
     MoveList mlq;
     MoveList mln;
@@ -100,7 +90,7 @@ private:
     MoveList*           move_list;
     size_t              currHead;
 
-    void scoreMoves(int ply, const MOVE tt_move);
+    void scoreMoves(int m_ply, const MOVE m_tt_move);
 };
 
 #endif // MOVEPICKER_H

@@ -250,7 +250,7 @@ void Uci::run()
 
 // NOTE : On peut avoir simultanément : _MSC_VER ET __llvm__
 //        Il faut faire attention à l'ordre des tests
-//        pour définir quelle version sera prise (bitboard.h)
+//        pour définir quelle version sera prise (Bitboard.h)
 
 #if defined(_MSC_VER)
             printf("compilateur Microsoft \n");
@@ -414,6 +414,7 @@ setoption name <id> [value <x>]
     std::string name;
     std::string value;
     std::string auxi;
+    char message[100];
 
     iss >> name;   // "name"
     if (name == "name")

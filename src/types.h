@@ -19,7 +19,10 @@ enum Color : int
     BLACK    = 1
 };
 
-const std::string side_name[] = {"White", "Black"};
+const std::string side_name[N_COLORS] = {"White", "Black"};
+const std::string camp[2][N_COLORS] = {
+    {"Blanche", "Noire"}, {"Blanc", "Noir"}
+};
 
 //Inverts the color (WHITE -> BLACK) and (BLACK -> WHITE)
 constexpr Color operator~(Color C) { return Color(C ^ BLACK); }
@@ -33,22 +36,12 @@ constexpr int N_PIECES = 7;
 enum PieceType : int
 {
     NO_TYPE  = 0,
-    Pawn     = 1,
-    Knight   = 2,
-    Bishop   = 3,
-    Rook     = 4,
-    Queen    = 5,
-    King     = 6
-};
-
-static constexpr std::array<PieceType, N_PIECES> AllPieceType = {
-    NO_TYPE,
-    Pawn,
-    Knight,
-    Bishop,
-    Rook,
-    Queen,
-    King
+    PAWN     = 1,
+    KNIGHT   = 2,
+    BISHOP   = 3,
+    ROOK     = 4,
+    QUEEN    = 5,
+    KING     = 6
 };
 
 const std::string piece_name[N_PIECES] {
@@ -63,13 +56,6 @@ const std::string piece_symbol[N_COLORS][N_PIECES] {
 static const std::array<std::string, N_PIECES> nom_piece_max = { "?", "", "N", "B", "R", "Q", "K"};
 static const std::array<std::string, N_PIECES> nom_piece_min = { "?", "", "n", "b", "r", "q", "k"};
 
-enum PieceValue {
-    P_MG =  101, P_EG =  160,
-    N_MG =  399, N_EG =  486,
-    B_MG =  408, B_EG =  499,
-    R_MG =  567, R_EG =  875,
-    Q_MG = 1386, Q_EG = 1588
-};
 
 /*******************************************************
  ** Les cases
@@ -77,7 +63,7 @@ enum PieceValue {
 
 constexpr int N_SQUARES = 64;
 
-enum Squares : int {
+enum EnumSquare : int {
     A1, B1, C1, D1, E1, F1, G1, H1,
     A2, B2, C2, D2, E2, F2, G2, H2,
     A3, B3, C3, D3, E3, F3, G3, H3,
@@ -100,12 +86,15 @@ const std::string square_name[N_SQUARES] = {
     "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
 };
 
-enum rank : int { RANK_1 = 0, RANK_2 = 1, RANK_3 = 2, RANK_4 = 3, RANK_5 = 4, RANK_6 = 5, RANK_7 = 6, RANK_8 = 7, NO_RANK = 8 };
-enum file : int { FILE_A = 0, FILE_B = 1, FILE_C = 2, FILE_D = 3, FILE_E = 4, FILE_F = 5, FILE_G = 6, FILE_H = 7, NO_FILE = 8 };
+enum Rank : int { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, NO_RANK };
+enum File : int { FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, NO_FILE };
+
+constexpr int N_RANKS = 8;
+constexpr int N_FILES = 8;
 
 // https://www.chessprogramming.org/General_Setwise_Operations#Shifting_Bitboards
 
-typedef enum Direction {
+enum Direction : int {
     NORTH       = 8,
     NORTH_EAST  = 9,
     EAST        = 1,
@@ -114,7 +103,7 @@ typedef enum Direction {
     SOUTH_WEST  = -9,
     WEST        = -1,
     NORTH_WEST  = 7
-} Direction;
+} ;
 
 struct PVariation {
     MOVE line[MAX_PLY+1];

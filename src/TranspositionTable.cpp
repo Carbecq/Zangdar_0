@@ -73,7 +73,16 @@ void TranspositionTable::init_size(int mbsize)
 
     assert(tt_size!=0 && (tt_size&(tt_size-1))==0); // power of 2
 
+    // Blunder 8 : 2 buckets , age = 0 ou 1
+    // Leorik    : 2 buckets
+    // berserk   : 2 buckets
+
+#if defined TT_SUNGORUS
     tt_buckets = 4;
+#elif defined TT_LEORIK
+    tt_buckets = 2;
+#endif
+
     tt_mask    = tt_size - tt_buckets;
     tt_entries = new HashEntry[tt_size];
 
@@ -135,6 +144,26 @@ void TranspositionTable::update_age(void)
 //--------------------------------------------------------
 void TranspositionTable::store(U64 hash, MOVE move, Score score, Score eval, int flag, int depth, int ply)
 {
+    /*
+     *   https://www.talkchess.com/forum3/viewtopic.php?f=7&t=59047&sid=a772c728def68198d66e038c6905f820&start=10
+     *   https://www.talkchess.com/forum3/viewtopic.php?f=7&t=76499
+     *  https://github.com/vshcherbyna/igel/blob/master/src/tt.cpp
+     *  https://www.talkchess.com/forum3/viewtopic.php?f=7&t=71994
+     *  https://www.talkchess.com/forum3/viewtopic.php?f=7&t=71994&sid=a788b3887052ee53e04868f27afbaaa2&start=10
+     *  https://www.talkchess.com/forum3/viewtopic.php?t=64604
+     *  https://www.open-chess.org/viewtopic.php?f=5&t=3106
+     *  https://www.talkchess.com/forum3/viewtopic.php?t=60589
+     *  https://www.talkchess.com/forum3/viewtopic.php?t=60056
+     *  https://home.hccnet.nl/h.g.muller/max-src2.html
+     *  https://www.talkchess.com/forum3/viewtopic.php?f=7&t=57603&sid=4bdb5eafa3b7b3f4f6f321edcff1f89d&start=10
+     *
+     */
+
+    // extract the 32-bit key from the 64-bit zobrist hash
+    U32 key32 = hash >> 32;
+
+#if defined TT_SUNGORUS
+
     HashEntry *entry=nullptr, *replace=nullptr;
     int oldest, age;
 
@@ -143,9 +172,6 @@ void TranspositionTable::store(U64 hash, MOVE move, Score score, Score eval, int
     replace = nullptr;
     oldest  = -1;
     entry   = tt_entries + (hash & tt_mask);
-
-    // extract the 32-bit key from the 64-bit zobrist hash
-    U32 key32 = hash >> 32;
 
     for (int i = 0; i < tt_buckets; i++)
     {
@@ -173,6 +199,9 @@ void TranspositionTable::store(U64 hash, MOVE move, Score score, Score eval, int
     replace->depth = depth;
     replace->date  = tt_date;
     replace->flag  = flag;
+
+
+#endif
 }
 
 //========================================================
@@ -190,12 +219,14 @@ bool TranspositionTable::probe(U64 hash, int ply, MOVE& move, Score& score, Scor
     move  = Move::MOVE_NONE;
     score = NOSCORE;
     eval  = NOSCORE;
-    flag  = BOUND_NONE;
-
-    HashEntry* entry = tt_entries + (hash & tt_mask);
+    flag  = 0;
 
     // extract the 32-bit key from the 64-bit zobrist hash
     U32 key32 = hash >> 32;
+
+#if defined TT_SUNGORUS
+
+    HashEntry* entry = tt_entries + (hash & tt_mask);
 
     for (int i = 0; i < tt_buckets; i++)
     {
@@ -214,6 +245,9 @@ bool TranspositionTable::probe(U64 hash, int ply, MOVE& move, Score& score, Scor
         entry++;
     }
 
+
+#endif
+
     return false;
 }
 
@@ -221,14 +255,16 @@ bool TranspositionTable::probe(U64 hash, int ply, MOVE& move, Score& score, Scor
 //! \brief  Recherche d'une donnée dans la table des pions
 //! \param[in]  hash    code hash des pions
 //! \param{out] score   score de cette position
+//! \param[out] passed  bitboard des pions passés
 //---------------------------------------------------------------
-bool TranspositionTable::probe_pawn_table(U64 hash, Score &eval)
+bool TranspositionTable::probe_pawn_table(U64 hash, Score &eval, Bitboard& passed)
 {
     PawnHashEntry* entry = pawn_entries + (hash & pawn_mask);
 
     if (entry->hash == hash)
     {
-        eval = entry->eval;
+        eval   = entry->eval;
+        passed = entry->passed;
         return true;
     }
 
@@ -240,13 +276,15 @@ bool TranspositionTable::probe_pawn_table(U64 hash, Score &eval)
 //!
 //! \param[in]  hash    hash des pions
 //! \param[in]  score   évaluation
+//! \param[in]  passed  bitboard des pions passés
 //-------------------------------------------------------------
-void TranspositionTable::store_pawn_table(U64 hash, Score eval)
+void TranspositionTable::store_pawn_table(U64 hash, Score eval, Bitboard passed)
 {
     PawnHashEntry* entry = pawn_entries + (hash & pawn_mask);
 
-    entry->hash = hash;
-    entry->eval = eval;
+    entry->hash   = hash;
+    entry->eval   = eval;
+    entry->passed = passed;
 }
 
 
@@ -278,11 +316,11 @@ int TranspositionTable::hash_full()
 {
     int used = 0;
 
-    for (int i = 0; i < 1000; i++)
+    for (int i = 0; i < tt_buckets*1000; i++)
         if (   tt_entries[i].move != Move::MOVE_NONE
             && tt_entries[i].date == tt_date)
             used++;
 
-    return used;
+    return used/tt_buckets;
 }
 
